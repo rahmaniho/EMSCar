@@ -168,9 +168,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Link>
             <a
               href="/showcase/"
-              className="hover:text-amber-400 transition text-emerald-300"
+              className="hover:text-amber-400 transition text-emerald-300 font-semibold"
             >
-              معرفی جامع (Pages)
+              بیزینس‌پلن اسلایدی
             </a>
             <Link
               to="/request/new"
