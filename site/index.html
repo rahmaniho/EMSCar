@@ -3,767 +3,182 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>اورژانس خودرو (Auto Emergency) | ارائه تعاملی اسلایدی، بیزینس‌پلن و شبیه‌ساز زنده عملکرد</title>
+    <title>اورژانس خودرو | EMSCar — طرح کسب‌وکار تعاملی، مدل عملیاتی و نقشه راه سرمایه‌گذاری</title>
     <meta
       name="description"
-      content="ارائه اسلایدی تعاملی، طرح کسب‌وکار (Business Plan) و شبیه‌ساز گام‌به‌گام تصویری عملکرد سامانه «اورژانس خودرو» (Auto Emergency — نام پیشنهادی انگلیسی) با راه‌اندازی اولیه در استان قزوین."
+      content="ارائه رسمی و تعاملی طرح کسب‌وکار (Business Plan) پروژه «اورژانس خودرو | EMSCar» در ۲۶ اسلاید تحلیلی: مسئله بازار، ممیزی محصول واقعی، اقتصاد واحد، پیش‌بینی مالی ۳ سناریویی و نقشه راه توسعه از استان قزوین."
     />
+    <link rel="canonical" href="https://rahmaniho.github.io/EMSCar/" />
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+    <link
+      rel="preload"
+      href="./assets/fonts/Vazirmatn-VF.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <!-- برچسب‌های اشتراک‌گذاری Open Graph -->
     <meta property="og:locale" content="fa_IR" />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://rahmaniho.github.io/EMSCar/" />
     <meta
       property="og:title"
-      content="اورژانس خودرو | بیزینس‌پلن تعاملی و نمایش تصویری گام‌به‌گام عملکرد"
+      content="اورژانس خودرو | EMSCar — ارائه تعاملی طرح کسب‌وکار و نقشه راه استراتژیک"
     />
     <meta
       property="og:description"
-      content="۱۲ اسلاید تعاملی شامل نمایش تصویری ۸ گام عملیات، شبیه‌ساز زنده دیسپچ قزوین، ماشین‌حساب تعرفه تومان و مدل اقتصادی سرمایه‌گذاری."
+      content="وب‌اپلیکیشن ارائه اسلایدی ۲۶ بخشی مبتنی بر شواهد مخزن EMSCar؛ شامل تحلیل بازار، ماشین‌حساب تعرفه تومان، اقتصاد واحد، تحلیل حساسیت و ماتریس ریسک."
     />
-    <meta name="theme-color" content="#060b16" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap"
-      rel="stylesheet"
+    <meta
+      property="og:image"
+      content="https://rahmaniho.github.io/EMSCar/assets/hero-qazvin-dispatch.jpg"
     />
+    <meta name="theme-color" content="#0B1020" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <!-- هدر چسبان کنترل ارائه و بیزینس‌پلن -->
-    <header class="top-header">
-      <div class="container header-inner">
-        <a href="#slide-1" data-goto-slide="1" class="brand-wrap">
-          <div class="brand-icon" aria-hidden="true">SOS</div>
+    <!-- نوار ابزار بالای ارائه -->
+    <header class="deck-topbar" role="banner">
+      <div class="container topbar-inner">
+        <a href="#slide-1" class="brand-link" aria-label="اورژانس خودرو | EMSCar - بازگشت به اسلاید اول">
+          <img src="./assets/favicon.svg" alt="نشان اورژانس خودرو" class="brand-mark" />
           <div>
-            <div class="brand-title">اورژانس خودرو</div>
-            <div class="brand-subtitle">ارائه تعاملی بیزینس‌پلن و شبیه‌ساز زنده عملیات (استان قزوین)</div>
+            <span class="brand-name">اورژانس خودرو | EMSCar</span>
+            <span class="brand-tag hide-sm">ارائه رسمی طرح کسب‌وکار و مدل عملیاتی (نسخه آبان ۱۴۰۵)</span>
           </div>
         </a>
 
-        <div class="header-controls">
-          <button type="button" id="btn-open-toc" class="btn-ctrl" aria-label="فهرست اسلایدها">
-            فهرست ۱۲ اسلاید ☰
+        <div class="topbar-actions" role="toolbar" aria-label="ابزارهای کنترل ارائه">
+          <button type="button" id="btn-open-overview" class="ctrl-btn" title="نمای کلی تمام اسلایدها">
+            فهرست ۲۶ اسلاید ☰
           </button>
-          <button type="button" id="btn-toggle-mode" class="btn-ctrl">
-            نمای یکپارچه پیمایشی ▤
+          <button type="button" id="btn-toggle-notes" class="ctrl-btn" title="نمایش یا پنهان کردن یادداشت ارائه‌دهنده (کلید N)">
+            یادداشت سخنران 🎙
           </button>
-          <button type="button" id="btn-print" class="btn-ctrl hide-mobile">
-            چاپ / PDF بیزینس‌پلن ⎙
+          <button type="button" id="btn-open-sources" class="ctrl-btn hide-sm" title="مشاهده پیوست منابع و طبقه‌بندی مفروضات">
+            منابع و مفروضات 📑
           </button>
-          <button type="button" id="btn-fullscreen" class="btn-ctrl hide-mobile">
+          <button type="button" id="btn-toggle-zen" class="ctrl-btn hide-sm" title="حالت ارائه بدون عناصر اضافی (کلید Z)">
+            حالت ارائه تمیز
+          </button>
+          <button type="button" id="btn-open-shortcuts" class="ctrl-btn hide-sm" title="راهنمای کلیدهای میان‌بر (?)">
+            میان‌برها ؟
+          </button>
+          <button type="button" id="btn-print-pdf" class="ctrl-btn hide-sm" title="چاپ یا ذخیره خروجی PDF تمام ۲۶ اسلاید">
+            چاپ / PDF ⎙
+          </button>
+          <button type="button" id="btn-fullscreen" class="ctrl-btn" title="حالت تمام‌صفحه مرورگر (کلید F)">
             تمام‌صفحه ⛶
           </button>
         </div>
       </div>
-      <div class="progress-track" aria-hidden="true">
-        <div id="progress-fill" class="progress-fill"></div>
+
+      <div class="progress-bar-wrap" role="progressbar" aria-label="پیشرفت اسلایدهای ارائه">
+        <div id="deck-progress-fill" class="progress-bar-fill"></div>
       </div>
     </header>
 
-    <!-- کشوی فهرست اسلایدها -->
-    <div id="toc-backdrop" class="toc-backdrop"></div>
-    <aside id="toc-drawer" class="toc-drawer" aria-label="فهرست اسلایدهای بیزینس‌پلن">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
-        <strong style="font-size:0.95rem;color:#fbbf24;">سرفصل اسلایدهای بیزینس‌پلن</strong>
-        <button type="button" id="btn-close-toc" class="btn-ctrl">بستن ✕</button>
-      </div>
-      <div id="toc-list"></div>
-    </aside>
-
-    <!-- صحنه اصلی ۱۲ اسلاید -->
-    <main class="container deck-stage">
-      <!-- ==================== اسلاید ۱: خلاصه اجرایی و گزاره ارزش ==================== -->
-      <section id="slide-1" class="slide active" aria-label="اسلاید ۱: خلاصه اجرایی">
-        <div class="slide-frame dark-slide">
-          <div class="slide-meta">
-            <span class="slide-kicker">طرح کسب‌وکار و نمایش زنده محصول (Investor &amp; Operations Deck)</span>
-            <span class="slide-counter-pill">اسلاید ۱ از ۱۲</span>
-          </div>
-
-          <div class="grid-2" style="align-items:center;">
-            <div>
-              <div style="margin-bottom:0.65rem;">
-                <span id="live-connection-badge" class="badge badge-warn">
-                  ● موتور تعاملی زنده کلاینت — منطبق با کدبیس واقعی سامانه
-                </span>
-              </div>
-              <h1 class="slide-title" style="color:#fff;">
-                سامانه هوشمند <span style="color:#fbbf24;">«اورژانس خودرو»</span>؛<br />
-                استاندارد نوین شفافیت، ایمنی و دیسپچ امداد جاده‌ای
-              </h1>
-              <p class="slide-subtitle">
-                پلتفرم یکپارچه ارتباط رانندگان در راه مانده با شبکه امدادگران احراز صلاحیت‌شده؛ با
-                <strong>راه‌اندازی متمرکز فاز اول در استان قزوین</strong> و معماری مهندسی آماده گسترش کنترل‌شده
-                به سراسر کشور. <em>(نام پیشنهادی انگلیسی: Auto Emergency — غیرثبت‌شده به‌عنوان علامت تجاری)</em>.
-              </p>
-
-              <div style="display:flex;flex-wrap:wrap;gap:0.65rem;margin-bottom:1rem;">
-                <button type="button" data-goto-slide="3" class="btn-primary">
-                  مشاهده تصویری نحوه کار (گام‌به‌گام) ←
-                </button>
-                <button type="button" data-goto-slide="4" class="btn-outline">
-                  شبیه‌ساز زنده دیسپچ قزوین
-                </button>
-                <button type="button" data-goto-slide="8" class="btn-outline">
-                  مدل مالی و درآمدی
-                </button>
-              </div>
-
-              <!-- در صورت اجرای هم‌زمان با بک‌اند سرور، دکمه ورود مستقیم نمایش می‌یابد -->
-              <div id="live-app-links" style="display:none;flex-wrap:wrap;gap:0.5rem;padding-top:0.55rem;border-top:1px solid rgba(255,255,255,0.14);">
-                <a href="/" class="btn-ctrl active-mode">ورود به وب‌اپلیکیشن عملیاتی زنده (/) ↗</a>
-                <a href="/auth" class="btn-ctrl">ورود سریع ۴ نقش آزمایشی ↗</a>
-              </div>
-            </div>
-
-            <figure class="hero-figure" style="margin:0;">
-              <img
-                src="./assets/hero-qazvin-dispatch.jpg"
-                alt="واحد امداد جاده‌ای در کنار خودرو متوقف‌شده در محور کوهستانی استان قزوین با تجهیزات ایمنی"
-              />
-              <figcaption class="figure-caption">
-                <strong>ارزش پیشنهادی محوری:</strong> پیش‌فاکتور قطعی بر پایه تومان پیش از اعزام + ناوگان دارای
-                تأییدیه فنی و گواهی ولتاژ بالا (EV) + ردیابی زنده موقعیت تا پایان مأموریت.
-              </figcaption>
-            </figure>
-          </div>
-
-          <div class="kpi-strip">
-            <div class="kpi-box">
-              <div class="kpi-val">۷ زون</div>
-              <div class="kpi-lbl">پوشش فعال فاز اول در قزوین</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-val">۱۵ خدمت</div>
-              <div class="kpi-lbl">سبد کامل امداد، کفی و EV</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-val">۱۵٪</div>
-              <div class="kpi-lbl">کمیسیون شفاف از اجرت خدمت</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-val">۱۶ دامنه</div>
-              <div class="kpi-lbl">معماری Modular Monolith</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-val">۳۵ جدول</div>
-              <div class="kpi-lbl">دیتابیس تراکنشی ACID</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-val">۱۵/۱۵</div>
-              <div class="kpi-lbl">تست خودکار یکپارچه پاس‌شده</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۲: مسئله بازار و شکاف اعتماد ==================== -->
-      <section id="slide-2" class="slide" aria-label="اسلاید ۲: مسئله بازار">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">تحلیل بازار و چالش موجود (Problem &amp; Market Gap)</span>
-            <span class="slide-counter-pill">اسلاید ۲ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">چرا بازار سنتی امداد خودرو نیازمند بازطراحی بنیادین است؟</h2>
-          <p class="slide-subtitle">
-            خرابی خودرو در آزادراه‌ها و شهرهای صنعتی تجربه‌ای پراسترس است که در مدل سنتی با ۴ چالش ساختاری برای
-            راننده و ناوگان همراه است:
+    <!-- صحنه اصلی نمایش اسلایدها -->
+    <main id="deck-viewport" class="container deck-main" aria-live="polite">
+      <noscript>
+        <section class="slide-shell">
+          <h1>اورژانس خودرو | EMSCar (نام پیشنهادی انگلیسی در کد: Auto Emergency)</h1>
+          <p>
+            این صفحه وب‌اپلیکیشن ارائه تعاملی طرح کسب‌وکار در ۲۶ اسلاید است (تمرکز پایلوت اولیه: استان قزوین — واحد مالی پایه: تومان).
+            توجه حقوقی: ملاحظات قانونی و صنفی درج‌شده مشاوره حقوقی قطعی محسوب نمی‌شوند. برای مشاهده نمودارها و اسلایدشو، لطفاً جاوااسکریپت مرورگر را فعال نمایید.
           </p>
-
-          <div class="grid-4" style="margin-bottom:1.2rem;">
-            <div class="card">
-              <span class="badge badge-err" style="margin-bottom:0.4rem;">چالش ۱ — مالی</span>
-              <h3>ابهام تعرفه و شوک قیمتی</h3>
-              <p>اعلام قیمت‌های سلیقه‌ای کنار جاده، سردرگمی ریال و تومان، و نبود پیش‌فاکتور شفاف پیش از اعزام یدک‌کش.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-err" style="margin-bottom:0.4rem;">چالش ۲ — ایمنی و فنی</span>
-              <h3>ناوگان عبوری فاقد احراز صلاحیت</h3>
-              <p>آسیب به گیربکس اتوماتیک یا باتری ولتاژ بالای خودروهای برقی و هیبریدی به دلیل اعزام خودروبر نامتناسب.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-err" style="margin-bottom:0.4rem;">چالش ۳ — عملیاتی</span>
-              <h3>سردرگمی مکانی و ETA غیرواقعی</h3>
-              <p>دشواری توضیح آدرس دقیق در بزرگراه و وعده‌های زمانی غیرواقعی در زمان شلوغی شیفت‌ها.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-err" style="margin-bottom:0.4rem;">چالش ۴ — پاسخگویی</span>
-              <h3>فقدان فاکتور رسمی و مرجع داوری</h3>
-              <p>پرداخت‌های کارت‌به‌کارت شخصی بدون کد رهگیری، فاکتور معتبر بیمه/گارانتی و نبود سازوکار ثبت شکایت.</p>
-            </div>
-          </div>
-
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>محور مقایسه</th>
-                  <th>وضعیت سنتی / تماس تلفنی پراکنده</th>
-                  <th>راهکار پیاده‌سازی‌شده در «اورژانس خودرو»</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>تعیین قیمت</strong></td>
-                  <td>توافقی و شفاهی پس از حضور در محل</td>
-                  <td>پیش‌فاکتور سیستمی به <strong>تومان صحیح</strong> پیش از ثبت درخواست + قفل افزایش بالای ۱۰٪ بدون تأیید مشتری</td>
-                </tr>
-                <tr>
-                  <td><strong>احراز صلاحیت امدادگر</strong></td>
-                  <td>نامشخص برای راننده متوقف در جاده</td>
-                  <td>قفل سخت‌افزاری آنلاین‌شدن در سرور تا تأیید مدارک، پلاک ناوگان و گواهی ولتاژ بالا (EV) توسط مدیر ارشد</td>
-                </tr>
-                <tr>
-                  <td><strong>تکمیل ظرفیت ناوگان</strong></td>
-                  <td>انتظار طولانی بدون اطلاع‌رسانی صادقانه</td>
-                  <td>عدم نمایش ETA ساختگی؛ ارجاع خودکار پرونده به میز فرماندهی اپراتور جهت هماهنگی دستی</td>
-                </tr>
-                <tr>
-                  <td><strong>حریم خصوصی راننده</strong></td>
-                  <td>پخش شماره تماس شخصی بین چندین راننده عبوری</td>
-                  <td>مخفی ماندن تلفن و آدرس دقیق تا پذیرش قطعی و سانسور خودکار مجدد بلافاصله پس از پایان مأموریت</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۳: نمایش تصویری گام‌به‌گام نحوه کار ==================== -->
-      <section id="slide-3" class="slide" aria-label="اسلاید ۳: نحوه کار تصویری گام‌به‌گام">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">نمایش تصویری مرحله‌به‌مرحله عملیات (Step-by-Step Visual Workflow)</span>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-              <button type="button" id="btn-walk-autoplay" class="btn-ctrl active-mode">
-                پخش خودکار مراحل ▶
-              </button>
-              <span class="slide-counter-pill">اسلاید ۳ از ۱۲</span>
-            </div>
-          </div>
-
-          <h2 class="slide-title">نحوه کار «اورژانس خودرو» از لحظه توقف خودرو تا صدور فاکتور و تسویه شبا</h2>
-          <p class="slide-subtitle">
-            روی هر یک از <strong>۸ گام عملیاتی</strong> زیر کلیک کنید (یا دکمه پخش خودکار را بزنید) تا تصویر
-            صحنه، رابط موبایل کاربر/امدادگر و رخداد دقیق پشت‌صحنه سرور را هم‌زمان مشاهده نمایید:
-          </p>
-
-          <div id="walkthrough-tabs" class="step-tabs" role="tablist"></div>
-          <div id="walkthrough-stage" class="walkthrough-stage" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۴: شبیه‌ساز زنده مأموریت و دیسپچ ==================== -->
-      <section id="slide-4" class="slide" aria-label="اسلاید ۴: شبیه‌ساز زنده مأموریت">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">آزمایشگاه زنده عملیات (Interactive Live Dispatch Sandbox)</span>
-            <span class="slide-counter-pill">اسلاید ۴ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">عملکرد واقعی دیسپچ، حرکت GPS و قوانین گارد سرور را زنده اجرا کنید</h2>
-          <p class="slide-subtitle">
-            یکی از ۴ سناریوی واقعی زیر را انتخاب کرده و گام‌به‌گام اجرا کنید تا حرکت واحد امدادی روی نقشه قزوین،
-            رفتار ماشین وضعیت و ثبت تراکنش کیف پول (یا مسدودسازی استان غیرفعال) را ببینید:
-          </p>
-
-          <div class="grid-2">
-            <div class="sim-console">
-              <div class="field">
-                <label for="sim-scenario" style="color:#fbbf24;">انتخاب سناریوی عملیاتی جهت تست زنده:</label>
-                <select id="sim-scenario">
-                  <option value="qazvin_jumpstart">۱. پژو ۲۰۷ در آزادراه قزوین-کرج (باتری‌به‌باتری — زون فعال)</option>
-                  <option value="alvand_ev">۲. خودروی برقی KMC E50A در الوند (متخصص ولتاژ بالا HV)</option>
-                  <option value="takestan_flatbed">۳. شاسی‌بلند در تاکستان (کفی خودروبر + قطعه و گیت ۱۰٪ قیمت)</option>
-                  <option value="alborz_blocked">۴. تلاش ثبت درخواست در کرج/البرز (مشاهده مسدودسازی 422 سرور!)</option>
-                </select>
-              </div>
-
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.65rem;">
-                <span id="sim-state-badge" class="badge badge-warn">آماده ثبت درخواست</span>
-                <button type="button" id="sim-reset-btn" class="btn-ctrl">شروع مجدد سناریو ↺</button>
-              </div>
-
-              <!-- نقشه تعاملی زنده حرکت واحد امدادی در استان قزوین -->
-              <svg
-                viewBox="0 0 660 250"
-                role="img"
-                aria-label="نقشه زنده شبیه‌ساز حرکت ناوگان در استان قزوین"
-                style="width:100%;height:auto;background:#050811;border:1px solid #1e293b;border-radius:0.75rem;margin-bottom:0.75rem;"
-              >
-                <!-- استان البرز غیرفعال در شرق -->
-                <rect x="520" y="55" width="125" height="145" rx="12" fill="#1e293b" stroke="#f43f5e" stroke-dasharray="5 4" />
-                <text x="582" y="105" fill="#fda4af" font-size="12" font-weight="bold" text-anchor="middle">استان البرز (کرج)</text>
-                <text x="582" y="125" fill="#94a3b8" font-size="10" text-anchor="middle">pending_approval (422)</text>
-
-                <!-- محدوده فعال قزوین -->
-                <rect x="40" y="30" width="460" height="195" rx="16" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="2" />
-                <text x="270" y="54" fill="#6ee7b7" font-size="13" font-weight="bold" text-anchor="middle">حوزه عملیاتی فعال استان قزوین (۷ زون مجاز)</text>
-
-                <!-- محور آزادراهی شرق به غرب -->
-                <line x1="65" y1="165" x2="500" y2="165" stroke="#475569" stroke-width="4" stroke-dasharray="8 5" />
-                <text x="340" y="142" fill="#cbd5e1" font-size="11" text-anchor="middle">مرکز قزوین</text>
-                <text x="392" y="212" fill="#cbd5e1" font-size="11" text-anchor="middle">الوند و شهر صنعتی</text>
-                <text x="455" y="185" fill="#cbd5e1" font-size="11" text-anchor="middle">آبیک / آزادراه شرق</text>
-                <text x="235" y="185" fill="#cbd5e1" font-size="11" text-anchor="middle">تاکستان</text>
-
-                <!-- خط مسیر اعزام زنده -->
-                <line id="sim-route-line" x1="355" y1="155" x2="455" y2="165" stroke="#fbbf24" stroke-width="3" stroke-dasharray="5 4" />
-
-                <!-- نشانگر خودروی متوقف مشتری -->
-                <circle id="sim-origin-pin" cx="455" cy="165" r="9" fill="#f43f5e" stroke="#fff" stroke-width="2" />
-                <!-- نشانگر واحد امدادی متحرک -->
-                <circle
-                  id="sim-responder-van"
-                  cx="355"
-                  cy="155"
-                  r="9"
-                  fill="#10b981"
-                  stroke="#fef08a"
-                  stroke-width="2.5"
-                  style="transition: all 0.55s ease;"
-                />
-              </svg>
-
-              <button type="button" id="sim-next-btn" class="btn-primary" style="width:100%;">
-                اجرای گام ۱: بررسی مرز جغرافیایی و ثبت درخواست ◀
-              </button>
-            </div>
-
-            <div style="display:flex;flex-direction:column;justify-content:space-between;gap:0.85rem;">
-              <div id="sim-summary-card" class="card" style="background:#0f172a;color:#f8fafc;border-color:#1e293b;font-size:0.83rem;display:grid;gap:0.35rem;"></div>
-
-              <div>
-                <div style="font-size:0.8rem;font-weight:800;margin-bottom:0.35rem;color:#0f172a;">
-                  کنسول زنده رخدادهای سرور، پیامک، SSE و دفترکل مالی:
-                </div>
-                <div id="sim-log" class="sim-log" style="color:#e2e8f0;background:#090e1a;"></div>
-              </div>
-
-              <div class="card" style="font-size:0.78rem;">
-                <strong>راهنمای نشانگرهای نقشه:</strong> دایره قرمز (🔴) موقعیت خودروی متوقف مشتری و دایره سبز
-                (🟢) موقعیت لحظه‌ای واحد امداد قزوین است که با استریم SSE حرکت می‌کند.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۵: راهبرد ورود به بازار (استان قزوین) ==================== -->
-      <section id="slide-5" class="slide" aria-label="اسلاید ۵: راهبرد جغرافیایی استان قزوین">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">راهبرد ورود به بازار (Go-To-Market &amp; Geographic Moat)</span>
-            <span class="slide-counter-pill">اسلاید ۵ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">چرا «استان قزوین» بهترین نقطه شروع استراتژیک در کشور است؟</h2>
-          <p class="slide-subtitle">
-            به‌جای پراکندگی سرمایه در ده‌ها شهر بدون ناوگان کافی، فاز اول با تمرکز ۱۰۰٪ روی استان قزوین آغاز شده
-            و زیرساخت گسترش مرحله‌ای در دیتابیس تعبیه گردیده است:
-          </p>
-
-          <div class="grid-3" style="margin-bottom:1.15rem;">
-            <div class="card">
-              <h3>۱. چهارراه ترانزیتی شمال و غرب کشور</h3>
-              <p>تلاقی آزادراه‌های پرتردد قزوین-کرج، قزوین-زنجان، قزوین-رشت و محور بوئین‌زهرا با تقاضای مستمر شبانه‌روزی امداد جاده‌ای.</p>
-            </div>
-            <div class="card">
-              <h3>۲. قطب صنعتی البرز، لیا و کاسپین</h3>
-              <p>حضور هزاران واحد تولیدی و تردد روزانه ده‌ها هزار خودروی سواری و خدماتی با پتانسیل قراردادهای سازمانی B2B.</p>
-            </div>
-            <div class="card">
-              <h3>۳. حاکمیت سخت‌گیرانه فعال‌سازی استان‌ها</h3>
-              <p>وجود استان در دیتابیس به‌معنی فعال بودن نیست؛ فعال‌سازی البرز یا زنجان منوط به جذب حداقل ناوگان تأییدشده و مصوبه ممیزی‌شده مدیر کل است.</p>
-            </div>
-          </div>
-
-          <div style="margin-bottom:0.85rem;">
-            <div style="font-size:0.8rem;font-weight:800;margin-bottom:0.45rem;">
-              مناطق ۷گانه فعال قزوین و استان‌های هم‌جوار را بررسی کنید:
-            </div>
-            <div id="zone-chips" class="chip-row"></div>
-          </div>
-          <div id="zone-detail" class="card"></div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۶: سبد ۱۵ خدمت و مزیت رقابتی EV ==================== -->
-      <section id="slide-6" class="slide" aria-label="اسلاید ۶: سبد ۱۵ خدمت تخصصی">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">سبد محصول و خدمات (15-Service Portfolio &amp; EV Specialization)</span>
-            <span class="slide-counter-pill">اسلاید ۶ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">پوشش کامل ۱۵ خدمت امدادی با تمایز ویژه در خودروهای وارداتی و برقی (EV)</h2>
-          <p class="slide-subtitle">
-            با رشد ورود خودروهای برقی و هیبریدی به جاده‌های ایران، «اورژانس خودرو» از روز نخست گواهی ایمنی ولتاژ
-            بالا (HV) را در موتور دیسپچ خود اجباری کرده است:
-          </p>
-
-          <div class="grid-2" style="margin-bottom:1.1rem;align-items:center;">
-            <div class="walk-photo-card" style="flex-direction:row;align-items:center;">
-              <img
-                src="./assets/step5-ev-specialist.jpg"
-                alt="متخصص امداد خودروهای برقی با دستکش ایمنی عایق ولتاژ بالا"
-                loading="lazy"
-                style="width:44%;height:165px;"
-              />
-              <div style="padding:0.85rem;font-size:0.8rem;">
-                <span class="badge badge-warn" style="margin-bottom:0.35rem;">مزیت رقابتی کلیدی</span>
-                <strong style="display:block;color:#fff;font-size:0.92rem;margin-bottom:0.25rem;">امداد تخصصی ولتاژ بالا (EV &amp; Hybrid)</strong>
-                <span style="color:#cbd5e1;">تخصیص خودکار منحصراً به تکنسین‌های دارای گواهی ایمنی ولتاژ بالا و کفی هیدرولیک تمام‌چرخ‌آزاد.</span>
-              </div>
-            </div>
-
-            <div class="walk-photo-card" style="flex-direction:row;align-items:center;">
-              <img
-                src="./assets/step4-flatbed-tow.jpg"
-                alt="حمل ایمن خودروی شاسی‌بلند روی کفی خودروبر هیدرولیک در آزادراه"
-                loading="lazy"
-                style="width:44%;height:165px;"
-              />
-              <div style="padding:0.85rem;font-size:0.8rem;">
-                <span class="badge badge-ok" style="margin-bottom:0.35rem;">کنترل ایمنی و قانونی</span>
-                <strong style="display:block;color:#fff;font-size:0.92rem;margin-bottom:0.25rem;">تطابق اجباری تجهیزات و احراز مالکیت</strong>
-                <span style="color:#cbd5e1;">الزام تعیین مقصد در خدمات یدک‌کش/کفی و الزام ثبت تأیید مالکیت قانونی پیش از بازگشایی مجاز در خودرو.</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="catalog-filters" class="chip-row" style="margin-bottom:0.95rem;">
-            <button type="button" class="chip active" data-cat="all">همه ۱۵ خدمت</button>
-            <button type="button" class="chip" data-cat="battery_electrical">باتری و برق</button>
-            <button type="button" class="chip" data-cat="tire_wheel">چرخ و لاستیک</button>
-            <button type="button" class="chip" data-cat="fuel_lock">سوخت و بازگشایی مجاز</button>
-            <button type="button" class="chip" data-cat="diagnostics_repair">عیب‌یابی و تعمیر در محل</button>
-            <button type="button" class="chip" data-cat="towing_transport">یدک‌کش و کفی خودروبر</button>
-            <button type="button" class="chip" data-cat="specialized_fleet">تخصصی وارداتی و برقی (EV)</button>
-          </div>
-
-          <div id="catalog-grid" class="grid-3"></div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۷: مدل درآمدی و ماشین‌حساب زنده تعرفه ==================== -->
-      <section id="slide-7" class="slide" aria-label="اسلاید ۷: مدل درآمدی و تعرفه">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">مدل درآمدی و شفافیت مالی (Revenue Model &amp; Live Toman Calculator)</span>
-            <span class="slide-counter-pill">اسلاید ۷ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">جریان درآمدی پایدار با حذف ۱۰۰٪ خطای تبدیل ریال و تومان</h2>
-          <p class="slide-subtitle">
-            پلتفرم <strong>۱۵٪ کمیسیون شفاف از اجرت خالص خدمت</strong> دریافت می‌کند و ۱۰۰٪ بهای قطعات مصرفی
-            تأییدشده را بدون کسر کمیسیون به امدادگر بازمی‌گرداند تا انگیزه گران‌فروشی قطعه از بین برود:
-          </p>
-
-          <div class="grid-2">
-            <div class="card">
-              <div class="grid-2" style="gap:0.75rem;">
-                <div class="field">
-                  <label for="calc-service">انتخاب خدمت امدادی:</label>
-                  <select id="calc-service"></select>
-                </div>
-                <div class="field">
-                  <label for="calc-zone">زون عملیاتی استان قزوین:</label>
-                  <select id="calc-zone">
-                    <option value="1.00">شهر قزوین مرکزی (×۱.۰۰)</option>
-                    <option value="1.05">الوند، شهر صنعتی، تاکستان یا آبیک (×۱.۰۵)</option>
-                    <option value="1.10">بوئین‌زهرا و محور جنوب (×۱.۱۰)</option>
-                    <option value="1.15">آزادراه قزوین-کرج / قزوین-زنجان (×۱.۱۵)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="grid-2" style="gap:0.75rem;">
-                <div class="field">
-                  <label for="calc-vehicle">رده خودروی مشتری:</label>
-                  <select id="calc-vehicle">
-                    <option value="domestic">سواری داخلی (×۱.۰۰)</option>
-                    <option value="suv_heavy">شاسی‌بلند / وانت سنگین (×۱.۲۰)</option>
-                    <option value="foreign">وارداتی / خارجی (×۱.۲۵)</option>
-                    <option value="electric">برقی / هیبریدی EV (×۱.۳۵)</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="calc-dispatch-km">مسافت اعزام امدادگر (km):</label>
-                  <input type="number" id="calc-dispatch-km" min="0" max="100" value="8" />
-                </div>
-              </div>
-
-              <div class="grid-2" style="gap:0.75rem;">
-                <div class="field">
-                  <label for="calc-tow-km">مسافت حمل خودروبر (km):</label>
-                  <input type="number" id="calc-tow-km" min="0" max="300" value="10" />
-                </div>
-                <div class="field">
-                  <label for="calc-parts">بهای قطعات مصرفی (تومان):</label>
-                  <input type="number" id="calc-parts" min="0" step="50000" value="0" />
-                </div>
-              </div>
-
-              <div style="display:flex;flex-wrap:wrap;gap:1rem;font-size:0.8rem;font-weight:700;margin-top:0.25rem;">
-                <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;">
-                  <input type="checkbox" id="calc-night" />
-                  تعرفه شبانه (۲۲ تا ۰۶) / فوری (×۱.۲۰)
-                </label>
-                <label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer;color:#059669;">
-                  <input type="checkbox" id="calc-discount" checked />
-                  کد تخفیف <span class="mono">QAZVIN1405</span> (۱۰٪ تا ۱۵۰ هزار)
-                </label>
-              </div>
-            </div>
-
-            <div id="calc-output" class="invoice-box" aria-live="polite"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۸: اقتصاد واحد و مدل مالی بیزینس‌پلن ==================== -->
-      <section id="slide-8" class="slide" aria-label="اسلاید ۸: اقتصاد واحد و برآورد مالی">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">شبیه‌ساز مالی سرمایه‌گذاری (Unit Economics &amp; Break-Even Model)</span>
-            <span class="slide-counter-pill">اسلاید ۸ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">مدل اقتصادی شفاف، نقطه سربه‌سر و شبیه‌ساز درآمدی استان قزوین</h2>
-          <p class="slide-subtitle">
-            فرضیات عملیاتی زیر را تغییر دهید تا نقطه سربه‌سر (Break-Even)، گردش مالی کل (GMV)، درآمد کمیسیون
-            پلتفرم و پرداختی به شبکه امدادگران قزوین به‌صورت زنده محاسبه شود:
-          </p>
-
-          <div class="grid-2">
-            <div class="card">
-              <div class="field">
-                <label for="bp-daily-missions">
-                  <span>تعداد مأموریت موفق روزانه در استان قزوین:</span>
-                  <strong id="lbl-bp-missions" style="color:#b45309;">۶۵ مأموریت در روز</strong>
-                </label>
-                <input type="range" id="bp-daily-missions" min="15" max="250" step="5" value="65" />
-              </div>
-
-              <div class="field">
-                <label for="bp-avg-basket">
-                  <span>میانگین اجرت هر مأموریت (ترکیب پنچرگیری تا کفی):</span>
-                  <strong id="lbl-bp-basket" style="color:#b45309;">۵۶۰٬۰۰۰ تومان</strong>
-                </label>
-                <input type="range" id="bp-avg-basket" min="320000" max="1100000" step="20000" value="560000" />
-              </div>
-
-              <div class="field">
-                <label for="bp-comm-rate">
-                  <span>نرخ کمیسیون پلتفرم (پیش‌فرض سامانه: ۱۵٪):</span>
-                  <strong id="lbl-bp-comm" style="color:#b45309;">۱۵٪</strong>
-                </label>
-                <input type="range" id="bp-comm-rate" min="10" max="22" step="1" value="15" />
-              </div>
-
-              <div class="field">
-                <label for="bp-fixed-cost">
-                  <span>هزینه ثابت ماهانه (مرکز پیام ۲۴/۷، سرور و بازاریابی قزوین):</span>
-                  <strong id="lbl-bp-fixed" style="color:#b45309;">۱۸۰ میلیون تومان</strong>
-                </label>
-                <input type="range" id="bp-fixed-cost" min="80" max="450" step="10" value="180" />
-              </div>
-
-              <div style="font-size:0.78rem;color:#475569;background:#fff;border:1px solid #e2e8f0;padding:0.65rem;border-radius:0.65rem;">
-                <strong>جریان‌های درآمدی مکمل فاز ۲ و ۳:</strong> اشتراک سالانه امداد خودروی کارکنان شهرک‌های
-                صنعتی البرز و کاسپین (B2B) و قرارداد پوشش جاده‌ای نمایندگی‌ها و شرکت‌های بیمه.
-              </div>
-            </div>
-
-            <div id="bp-financial-output" class="invoice-box" aria-live="polite"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۹: ۴ نقش کاربری و امنیت سازمانی ==================== -->
-      <section id="slide-9" class="slide" aria-label="اسلاید ۹: اکوسیستم نقش‌ها و امنیت">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">حاکمیت سازمانی و امنیت (4-Role RBAC &amp; Location Privacy)</span>
-            <span class="slide-counter-pill">اسلاید ۹ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">اکوسیستم ۴ نقش کاربری با کنترل دسترسی سخت‌گیرانه در لایه سرور</h2>
-          <p class="slide-subtitle">
-            هیچ قانون امنیتی صرفاً با مخفی کردن دکمه در رابط کاربری رها نشده است؛ تمامی مجوزها و مالکیت رکوردها در
-            سرور بررسی و در <code class="mono">security_events</code> ثبت می‌شوند:
-          </p>
-
-          <div class="grid-4" style="margin-bottom:1.15rem;">
-            <div class="card">
-              <span class="badge badge-info" style="margin-bottom:0.4rem;">۱. مشتری (Customer)</span>
-              <h3>ثبت سریع و پایش شفاف</h3>
-              <p>مدیریت خودروها، ثبت درخواست روی نقشه قزوین، ردیابی زنده امدادگر، تأیید تغییر قیمت، پرداخت، فاکتور چاپی و ثبت تیکت.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-ok" style="margin-bottom:0.4rem;">۲. امدادگر (Responder)</span>
-              <h3>ناوگان احراز صلاحیت‌شده</h3>
-              <p>ارسال مدارک و گواهی EV، قفل آنلاین‌شدن تا تأیید مدیر، پذیرش اتمیک مأموریت، ارسال GPS، گزارش فنی و تسویه شبای ۲۴ رقمی.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-warn" style="margin-bottom:0.4rem;">۳. اپراتور (Operator)</span>
-              <h3>مرکز فرماندهی ۲۴/۷ قزوین</h3>
-              <p>مدیریت صف زنده، تخصیص دستی موارد بدون امدادگر آزاد، ثبت مهلت پرداخت اضطراری جاده و یادداشت‌های داخلی محرمانه.</p>
-            </div>
-            <div class="card">
-              <span class="badge badge-err" style="margin-bottom:0.4rem;">۴. مدیر ارشد (Super Admin)</span>
-              <h3>حاکمیت کلان و مالی</h3>
-              <p>داشبورد KPI، تأیید/تعلیق ناوگان، تنظیم تعرفه و تخفیف، مصوبه فعال‌سازی استان‌ها، بازپرداخت بانکی و ممیزی امنیتی.</p>
-            </div>
-          </div>
-
-          <div class="grid-3">
-            <div class="card">
-              <h3>حریم خصوصی مکانی پویا</h3>
-              <p>پيش از پذیرش مأموریت، امدادگر فقط محدوده کلی را می‌بیند و پس از تکمیل مأموریت نیز شماره تلفن و آدرس دقیق مشتری مجدداً سانسور می‌شود.</p>
-            </div>
-            <div class="card">
-              <h3>رمزنگاری و مخزن خصوصی فایل</h3>
-              <p>گذرواژه با <code class="mono">scrypt</code> و توکن نشست با <code class="mono">SHA-256</code> هش می‌شوند. تصاویر در <code class="mono">storage/private/</code> خارج از وب عمومی نگهداری می‌شوند.</p>
-            </div>
-            <div class="card">
-              <h3>یادداشت محرمانه و ضد IDOR</h3>
-              <p>یادداشت‌های بازرسی اپراتور در جدول مجزای <code class="mono">internal_operator_notes</code> ذخیره شده و هرگز در API مشتری نشت نمی‌کنند.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۱۰: معماری مهندسی ۱۶ دامنه ==================== -->
-      <section id="slide-10" class="slide" aria-label="اسلاید ۱۰: معماری مهندسی">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">زیرساخت و دارایی فناوری (16-Domain Modular Architecture)</span>
-            <span class="slide-counter-pill">اسلاید ۱۰ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">دارایی نرم‌افزاری تحویل‌شده: ۱۶ ماژول دامنه، ۳۵ جدول ACID و ۰ آسیب‌پذیری</h2>
-          <p class="slide-subtitle">
-            معماری Modular Monolith تایپ‌اسکریپتی با مهاجرت‌های برگشت‌پذیر (<code class="mono">up/down</code>)،
-            بکاپ آنلاین <code class="mono">VACUUM INTO</code>، جریان بلادرنگ SSE و آداپتورهای استاندارد زرین‌پال و کاوه‌نگار:
-          </p>
-
-          <div class="field" style="max-width:440px;">
-            <label for="domain-search">جستجوی زنده در ۱۶ دامنه مهندسی و ۳۵ جدول دیتابیس:</label>
-            <input type="text" id="domain-search" placeholder="مثال: dispatch، invoices، قزوین، audit، wallet..." />
-          </div>
-
-          <div id="domains-grid" class="grid-4"></div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۱۱: نقشه راه اجرایی ۴ فازی ==================== -->
-      <section id="slide-11" class="slide" aria-label="اسلاید ۱۱: نقشه راه توسعه">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">برنامه اجرایی و مقیاس‌پذیری (Execution &amp; National Scaling Roadmap)</span>
-            <span class="slide-counter-pill">اسلاید ۱۱ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">نقشه راه ۴ فازی از تثبیت عملیات قزوین تا مقیاس ملی ۳۱ استان</h2>
-          <p class="slide-subtitle">
-            رشد مرحله‌ای مبتنی بر آمادگی واقعی ناوگان و زیرساخت داده، بدون تعهدات پوششی انجام‌ناشدنی:
-          </p>
-
-          <div class="grid-2">
-            <div class="card" style="border-right:4px solid #10b981;">
-              <span class="badge badge-ok" style="margin-bottom:0.4rem;">فاز ۱ — تکمیل و تحویل‌شده در کدبیس</span>
-              <h3>هسته کامل محصول و آماده‌سازی ۷ زون استان قزوین</h3>
-              <p>پیاده‌سازی کامل ۱۶ دامنه، ۳۵ جدول، کاتالوگ ۱۵ خدمت، پنل‌های ۴ نقش، استریم SSE، ضدتکرار پرداخت/درخواست، ۱۵ تست خودکار سرتاسری و پایپ‌لاین CI/CD.</p>
-            </div>
-
-            <div class="card" style="border-right:4px solid #f59e0b;">
-              <span class="badge badge-warn" style="margin-bottom:0.4rem;">فاز ۲ — ماه ۱ تا ۳ پس از تأمین مجوزها</span>
-              <h3>بهره‌برداری تجاری پایلوت در استان قزوین</h3>
-              <p>اتصال کلیدهای تجاری درگاه بانکی (زرین‌پال/شاپرک) و پنل پیامک (کاوه‌نگار)، جذب ۲۵ تا ۳۵ واحد امدادی تأییدشده در قزوین، الوند، تاکستان و آبیک و استقرار شیفت ۲۴/۷ مرکز پیام.</p>
-            </div>
-
-            <div class="card" style="border-right:4px solid #0284c7;">
-              <span class="badge badge-info" style="margin-bottom:0.4rem;">فاز ۳ — ماه ۴ تا ۸</span>
-              <h3>گسترش کنترل‌شده به کریدور البرز، زنجان و گیلان</h3>
-              <p>فعال‌سازی تک‌به‌تک استان‌های هم‌جوار از طریق پنل Super Admin پس از احراز حداقل ناوگان بومی و عقد قراردادهای سازمانی B2B با شهرک‌های صنعتی و بیمه‌ها.</p>
-            </div>
-
-            <div class="card" style="border-right:4px solid #6366f1;">
-              <span class="badge badge-info" style="margin-bottom:0.4rem;">فاز ۴ — ماه ۹ به بعد</span>
-              <h3>کلاستر چندسروره ملی (PostgreSQL + PostGIS + Redis)</h3>
-              <p>مهاجرت لایه داده از SQLite WAL تک‌سروره به کلاستر توزیع‌شده PostgreSQL + PostGIS، گذرگاه Redis Pub/Sub برای SSE چندنودی و اپلیکیشن بومی آفلاین‌محور امدادگران جاده‌ای.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==================== اسلاید ۱۲: مدیریت ریسک، شفافیت حقوقی و جمع‌بندی ==================== -->
-      <section id="slide-12" class="slide" aria-label="اسلاید ۱۲: مدیریت ریسک و جمع‌بندی">
-        <div class="slide-frame">
-          <div class="slide-meta">
-            <span class="slide-kicker">مدیریت ریسک، انطباق حقوقی و جمع‌بندی (Risk &amp; Regulatory Governance)</span>
-            <span class="slide-counter-pill">اسلاید ۱۲ از ۱۲</span>
-          </div>
-          <h2 class="slide-title">پاسخ مهندسی به ریسک‌های عملیاتی و شفافیت الزامات حقوقی ایران</h2>
-          <p class="slide-subtitle">
-            سامانه «اورژانس خودرو» برای شرایط واقعی جاده‌های ایران و اختلالات احتمالی شبکه طراحی شده است:
-          </p>
-
-          <div class="grid-3" style="margin-bottom:1.15rem;">
-            <div class="card">
-              <h3>ریسک کندی اینترنت در آزادراه</h3>
-              <p>مجهز به <code class="mono">Idempotency-Key</code> ضد ثبت تکراری، امکان ورود دستی نشانی در صورت خطای GPS و ثبت تلفنی توسط اپراتور مرکز پیام قزوین.</p>
-            </div>
-            <div class="card">
-              <h3>ریسک اختلال موقت درگاه بانکی</h3>
-              <p>پشتیبانی از وضعیت رسمی بدهی مجاز اضطراری (<code class="mono">approved_debt</code>) با تأیید اپراتور تا راننده در شب یا سرما در جاده معطل نماند.</p>
-            </div>
-            <div class="card">
-              <h3>شفافیت حالت آزمایشی (Sandbox)</h3>
-              <p>بدون تنظیم کلیدهای واقعی درگاه و پیامک در <code class="mono">.env</code>، سامانه صادقانه برچسب آزمایشی نشان می‌دهد و در حالت Production بدون کلید واقعی بالا نمی‌آید.</p>
-            </div>
-          </div>
-
-          <div class="legal-box" style="margin-bottom:1.15rem;">
-            <strong>شفافیت حقوقی، صنفی و نظارتی در ایران (مفروضات نیازمند بررسی حقوقی رسمی):</strong>
-            موارد مربوط به دریافت نماد اعتماد الکترونیکی (اینماد)، مجوزهای اتحادیه صنفی امدادخودرو، سازمان راهداری
-            و حمل‌ونقل جاده‌ای و پلیس راهور در محورهای استان قزوین، قواعد مالیات بر ارزش افزوده و صورتحساب
-            الکترونیکی سامانه مؤدیان، دوره نگهداری داده‌های مکانی/هویتی و استعلام ثبت علامت تجاری پیش از هرگونه
-            استفاده تجاری از نام پیشنهادی انگلیسی <em>Auto Emergency</em> در کنار نام اصلی
-            <strong>«اورژانس خودرو»</strong>، به‌عنوان مفروضات مهندسی لحاظ شده‌اند و
-            <strong>مشاوره حقوقی قطعی محسوب نمی‌شوند</strong>؛ اخذ تأییدیه مشاور حقوقی رسمی پیش از بهره‌برداری
-            عمومی الزامی است.
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.8rem;background:#0b1324;color:#fff;padding:1.1rem 1.25rem;border-radius:0.95rem;">
-            <div>
-              <strong style="font-size:1rem;color:#fbbf24;">آماده ارائه، ارزیابی فنی و شروع پایلوت اجرایی در استان قزوین</strong>
-              <div style="font-size:0.8rem;color:#cbd5e1;">می‌توانید کل این بیزینس‌پلن ۱۲ اسلایدی را چاپ / به PDF تبدیل کنید یا شبیه‌سازها را مجدداً اجرا نمایید.</div>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.55rem;">
-              <button type="button" onclick="window.print()" class="btn-primary">ذخیره PDF بیزینس‌پلن ⎙</button>
-              <a
-                href="https://github.com/rahmaniho/EMSCar"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn-ctrl"
-              >
-                مشاهده مخزن و مستندات فنی در GitHub ↗
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </noscript>
     </main>
 
-    <!-- نوار پایین ناوبری اسلایدها (موبایل و دسکتاپ) -->
-    <nav class="deck-dock" aria-label="کنترل پیمایش اسلایدها">
-      <div class="dock-inner">
-        <button type="button" id="dock-prev" class="dock-btn">→ اسلاید قبلی</button>
+    <!-- نوار کنترل پایین ارائه -->
+    <nav class="presenter-dock" aria-label="ناوبری اسلایدها">
+      <div class="dock-row">
+        <button type="button" id="btn-prev-slide" class="nav-btn" aria-label="رفتن به اسلاید قبلی">
+          → اسلاید قبلی
+        </button>
 
-        <div style="display:flex;align-items:center;gap:0.65rem;">
-          <button type="button" id="dock-counter" class="btn-ctrl" title="مشاهده فهرست اسلایدها">
-            اسلاید ۱ از ۱۲ ☰
+        <div style="display:flex;align-items:center;gap:0.45rem;">
+          <button type="button" id="btn-slide-counter" class="ctrl-btn" aria-label="انتخاب مستقیم اسلاید">
+            اسلاید ۱ از ۲۶ ☰
           </button>
-          <div id="dock-dots" class="dock-dots" aria-hidden="true"></div>
+          <button type="button" id="btn-restart" class="ctrl-btn hide-sm" title="شروع مجدد ارائه از اسلاید اول">
+            ابتدا ↺
+          </button>
         </div>
 
-        <button type="button" id="dock-next" class="dock-btn primary">اسلاید بعدی ←</button>
+        <button type="button" id="btn-next-slide" class="nav-btn primary" aria-label="رفتن به اسلاید بعدی">
+          اسلاید بعدی ←
+        </button>
       </div>
     </nav>
+
+    <!-- مودال ۱: فهرست کامل ۲۶ اسلاید (Slide Overview) -->
+    <div id="modal-overview" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ov-title">
+      <div class="modal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
+          <h2 id="ov-title" style="margin:0;font-size:1.05rem;color:#22D3EE;">نمای کلی و پرش مستقیم به ۲۶ اسلاید ارائه</h2>
+          <button type="button" class="ctrl-btn" data-close-modal>بستن ✕</button>
+        </div>
+        <div id="overview-grid" class="overview-grid"></div>
+      </div>
+    </div>
+
+    <!-- مودال ۲: راهنمای کلیدهای میان‌بر صفحه‌کلید و لمس -->
+    <div id="modal-shortcuts" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sc-title">
+      <div class="modal-card" style="max-width:560px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem;">
+          <h2 id="sc-title" style="margin:0;font-size:1.05rem;color:#22D3EE;">راهنمای کنترل حرفه‌ای ارائه</h2>
+          <button type="button" class="ctrl-btn" data-close-modal>بستن ✕</button>
+        </div>
+        <div style="display:grid;gap:0.45rem;font-size:0.83rem;">
+          <div class="ledger-row"><span>اسلاید بعدی:</span><span class="mono">ArrowLeft / Space / PageDown</span></div>
+          <div class="ledger-row"><span>اسلاید قبلی:</span><span class="mono">ArrowRight / PageUp</span></div>
+          <div class="ledger-row"><span>رفتن به ابتدا / انتهای ارائه:</span><span class="mono">Home / End</span></div>
+          <div class="ledger-row"><span>نمایش یا پنهان‌سازی یادداشت سخنران:</span><span class="mono">N</span></div>
+          <div class="ledger-row"><span>حالت ارائه بدون عناصر اضافی:</span><span class="mono">Z</span></div>
+          <div class="ledger-row"><span>ورود / خروج از حالت تمام‌صفحه:</span><span class="mono">F</span></div>
+          <div class="ledger-row"><span>نمایش روی موبایل و تبلت:</span><span>کشیدن افقی انگشت (Swipe) یا دکمه‌های پایین</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- مودال ۳: پیوست منابع، طبقه‌بندی داده‌ها و سلب مسئولیت‌ها -->
+    <div id="modal-sources" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="src-title">
+      <div class="modal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;">
+          <h2 id="src-title" style="margin:0;font-size:1.05rem;color:#22D3EE;">پیوست شفافیت منابع، وضعیت داده‌ها و مفروضات مدل</h2>
+          <button type="button" class="ctrl-btn" data-close-modal>بستن ✕</button>
+        </div>
+        <div style="display:grid;gap:0.75rem;font-size:0.82rem;color:#CBD5E1;line-height:1.8;">
+          <div class="card">
+            <h3>۱. داده‌های تأییدشده از مخزن واقعی (Verified Codebase Evidence)</h3>
+            <p>
+              مشخصات فنی محصول شامل ۱۶ ماژول دامنه، ۳۵ جدول رابطه‌ای <code class="mono">node:sqlite</code> در حالت WAL، کاتالوگ ۱۵ خدمت، ماشین وضعیت ۱۲حالته، ۴ نقش کاربری RBAC، حاکمیت فعال بودن انحصاری استان قزوین (۷ زون)، فرمول ۱۲ مرحله‌ای <code class="mono">calculateOfficialPrice</code> بر پایه تومان صحیح و تبدیل ریالی مرز درگاه، جریان زنده SSE و ۱۵ تست خودکار مستقیماً از کد منبع مخزن <a href="https://github.com/rahmaniho/EMSCar" target="_blank" rel="noopener noreferrer" style="color:#22D3EE;">rahmaniho/EMSCar</a> استخراج شده‌اند.
+            </p>
+          </div>
+          <div class="card">
+            <h3>۲. مفروضات مالی، تعرفه‌ای و بازار (Planning Assumptions &amp; Unknowns)</h3>
+            <p>
+              • پروژه در مرحله پیش از بهره‌برداری تجاری عمومی قرار دارد؛ بنابراین هیچ درآمد تاریخی، قرارداد امضاشده سازمانی یا آمار واقعی CAC/LTV وجود ندارد و تمامی ارقام اسلایدهای ۸ و ۱۲ تا ۱۶ <strong>مدل‌های محاسباتی آزمایشی با پارامترهای قابل تنظیم</strong> هستند.<br/>
+              • نرخ‌های پایه ۱۵ خدمت در فایل <code class="mono">migrations/002_reference_catalog_qazvin.up.sql</code> داده‌های مرجع آزمایشی بوده و پیش از عرضه عمومی باید با نرخ‌نامه رسمی صنفی استان قزوین تطبیق یابند.<br/>
+              • آمار دقیق کشوری وقایع امداد جاده‌ای به تفکیک استان بدون دسترسی به سالنامه رسمی راهداری/راهور «نامشخص» تلقی شده و برنامه گردآوری میدانی برای آن تدوین گردیده است.
+            </p>
+          </div>
+          <div class="card" style="border-color:rgba(245,158,11,0.45);">
+            <h3>۳. شفافیت هویت برند و الزامات حقوقی ایران</h3>
+            <p>
+              • نام فارسی پروژه <strong>«اورژانس خودرو»</strong>، نام مخزن <strong>EMSCar</strong> و عبارت انگلیسی <em>Auto Emergency</em> صرفاً یک عنوان پیشنهادی ثبت‌نشده است.<br/>
+              • این وب‌سایت روی GitHub Pages یک <strong>ارائه تعاملی طرح کسب‌وکار</strong> است و تا زمان استقرار سرور عملیاتی، اخذ اینماد، مجوزهای صنفی/راهداری و اتصال درگاه واقعی، سامانه اعزام زنده عمومی محسوب نمی‌شود. نکات حقوقی درج‌شده در اسلاید ۲۰ <strong>مشاوره حقوقی قطعی محسوب نمی‌شوند</strong> و نیازمند بررسی وکیل متخصص هستند.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- اعلان کوتاه وضعیت -->
+    <div id="deck-toast" class="toast-msg" role="status" aria-live="polite"></div>
 
     <script type="module" src="./app.js"></script>
   </body>
