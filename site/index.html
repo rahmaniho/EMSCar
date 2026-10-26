@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>اورژانس خودرو (Auto Emergency) | معرفی جامع معماری، امکانات و مستندات سامانه امداد خودرو</title>
+    <meta
+      name="description"
+      content="معرفی جامع فنی و عملیاتی سامانه «اورژانس خودرو» (Auto Emergency — نام پیشنهادی انگلیسی)؛ پلتفرم هوشمند امداد خودرو با راه‌اندازی اولیه در استان قزوین و معماری توسعه ملی."
+    />
+    <meta property="og:locale" content="fa_IR" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="اورژانس خودرو | پلتفرم جامع عملیاتی و مهندسی امداد خودرو (استان قزوین)"
+    />
+    <meta
+      property="og:description"
+      content="معماری Modular Monolith در ۱۶ دامنه، ۳۵ جدول تراکنشی، ماشین وضعیت ۱۲حالته، قیمت‌گذاری شفاف تومان، کنترل دسترسی سمت سرور و ۱۴ مجموعه تست خودکار."
+    />
+    <meta name="theme-color" content="#090e1a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- نوار شفافیت هویت برند و وضعیت یکپارچه‌سازی -->
+    <div class="top-ribbon">
+      <strong>هویت برند و شفافیت فنی:</strong> نام اصلی سامانه <strong>«اورژانس خودرو»</strong> است و عبارت
+      <em>Auto Emergency</em> صرفاً یک نام پیشنهادی انگلیسی (غیرثبت‌شده به‌عنوان علامت تجاری) است. پوشش فعال فاز اول:
+      <strong>منحصراً استان قزوین</strong>.
+    </div>
+
+    <!-- هدر چسبان -->
+    <header class="site-header">
+      <div class="container nav-inner">
+        <a href="#top" class="brand">
+          <div class="brand-badge" aria-hidden="true">SOS</div>
+          <div>
+            <div class="brand-title">اورژانس خودرو</div>
+            <div class="brand-sub">مستندات جامع محصول و معماری مهندسی</div>
+          </div>
+        </a>
+
+        <button type="button" id="mobile-nav-btn" class="mobile-nav-btn" aria-label="باز کردن فهرست بخش‌ها">
+          فهرست بخش‌ها ☰
+        </button>
+
+        <nav id="nav-links" class="nav-links" aria-label="ناوبری اصلی معرفی پروژه">
+          <a href="#geography">پوشش قزوین</a>
+          <a href="#architecture">معماری و ۱۶ دامنه</a>
+          <a href="#lifecycle">چرخه ۱۲حالته و دیسپچ</a>
+          <a href="#pricing">شبیه‌ساز قیمت (تومان)</a>
+          <a href="#catalog">۱۵ خدمت امدادی</a>
+          <a href="#security">امنیت و ۴ نقش</a>
+          <a href="#testing">تست‌ها و استقرار</a>
+          <a
+            href="https://github.com/rahmaniho/EMSCar"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-repo"
+          >
+            مشاهده مخزن GitHub ↗
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- بخش آغازین (Hero) -->
+    <section id="top" class="hero">
+      <div class="container">
+        <div class="hero-grid">
+          <div>
+            <div class="pill-active">
+              <span>●</span>
+              <span>راه‌اندازی عملیاتی مرحله اول: استان قزوین | آماده گسترش کنترل‌شده ملی</span>
+            </div>
+            <h1>
+              سامانه جامع عملیاتی، دیسپچ هوشمند و مدیریت مالی
+              <span class="accent">«اورژانس خودرو»</span>
+            </h1>
+            <p class="hero-lead">
+              یک پلتفرم کامل، امن و ممیزی‌پذیر امداد جاده‌ای و شهری که فرآیندهای ثبت درخواست اضطراری،
+              مکان‌یابی و نقشه، احراز صلاحیت سخت‌گیرانه امدادگران، تخصیص اتمیک ناوگان، پیش‌فاکتور و صورتحساب
+              شفاف بر پایه <strong>تومان صحیح</strong>، پرداخت تأییدشده سمت سرور، پشتیبانی و تسویه‌حساب شبای
+              امدادگران را در یک معماری یکپارچه TypeScript پیاده‌سازی کرده است.
+            </p>
+
+            <div id="hero-actions" class="hero-actions">
+              <a href="#pricing" class="btn-primary">آزمایش زنده ماشین‌حساب تعرفه ↓</a>
+              <a href="#architecture" class="btn-secondary">بررسی معماری ۱۶ دامنه</a>
+              <a
+                href="https://github.com/rahmaniho/EMSCar"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn-secondary"
+              >
+                کد منبع و مستندات فنی
+              </a>
+            </div>
+          </div>
+
+          <aside class="hero-panel" aria-label="اصول غیرقابل مذاکره سامانه">
+            <h2>ستون‌های غیرقابل مذاکره در طراحی این سامانه</h2>
+            <ul class="check-list">
+              <li>
+                <span class="dot-ok">✓</span>
+                <span>
+                  <strong>حاکمیت جغرافیایی واقعی:</strong> وجود استان در دیتابیس به‌معنی فعال بودن نیست؛ در
+                  زمان راه‌اندازی فقط استان قزوین فعال است و سایر مناطق در سرور مسدود می‌شوند.
+                </span>
+              </li>
+              <li>
+                <span class="dot-ok">✓</span>
+                <span>
+                  <strong>قفل صلاحیت امدادگر در سرور:</strong> هیچ امدادگری پیش از بررسی مدارک هویتی/فنی و
+                  تأیید مدیر ارشد امکان آنلاین‌شدن یا دریافت مأموریت را ندارد.
+                </span>
+              </li>
+              <li>
+                <span class="dot-ok">✓</span>
+                <span>
+                  <strong>صفر خطای ریال/تومان و عدم موفقیت جعلی:</strong> ذخیره تمامی مبالغ با پسوند صریح
+                  <code class="mono">_toman</code>، استعلام سمت سرور Callback بانکی و اعلام صادقانه حالت آزمایشی
+                  (Sandbox).
+                </span>
+              </li>
+              <li>
+                <span class="dot-ok">✓</span>
+                <span>
+                  <strong>صداقت عملیاتی در دیسپچ:</strong> در صورت تکمیل ظرفیت لحظه‌ای ناوگان، زمان رسیدن
+                  (ETA) ساختگی نمایش داده نمی‌شود و درخواست مستقیم به صف اپراتور ارجاع می‌گردد.
+                </span>
+              </li>
+            </ul>
+          </aside>
+        </div>
+
+        <!-- نوار آمار واقعی و قابل راستی‌آزمایی در کد -->
+        <div class="stats-grid" aria-label="شاخص‌های مهندسی پروژه">
+          <div class="stat-card">
+            <div class="stat-num">۱۶</div>
+            <div class="stat-label">ماژول دامنه مجزا (Modular Monolith)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">۳۵</div>
+            <div class="stat-label">جدول رابطه‌ای ACID با مهاجرت برگشت‌پذیر</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">۱۵</div>
+            <div class="stat-label">خدمت تخصصی (شامل کفی خودروبر و EV)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">۱۲</div>
+            <div class="stat-label">وضعیت رسمی چرخه مأموریت با لاگ تاریخچه</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">۴ نقش</div>
+            <div class="stat-label">مشتری، امدادگر، اپراتور و مدیر ارشد (RBAC)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">۱۵ / ۱۵</div>
+            <div class="stat-label">تست خودکار یکپارچه پاس‌شده و ۰ آسیب‌پذیری</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش ۱: حاکمیت جغرافیایی و تمرکز فاز اول در استان قزوین -->
+    <section id="geography" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۱. راهبرد جغرافیایی و توسعه تدریجی</span>
+          <h2>راه‌اندازی متمرکز در «استان قزوین» با زیرساخت گسترش کنترل‌شده به کل ایران</h2>
+          <p>
+            برخلاف سامانه‌هایی که پوشش جغرافیایی را به‌صورت رشته‌های متنی هاردکد می‌کنند یا استان‌های فاقد
+            ناوگان را فعال نشان می‌دهند، در «اورژانس خودرو» مدل داده سه سطحی
+            (<strong>استان ← شهر ← زون خدماتی</strong>) با کنترل مرزی سمت سرور پیاده‌سازی شده است.
+          </p>
+        </div>
+
+        <div class="geo-layout">
+          <div class="map-canvas">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.65rem;font-size:0.8rem;">
+              <strong style="color:#fbbf24;">شماتیک پوشش عملیاتی فاز اول (استان قزوین در برابر استان‌های هم‌جوار)</strong>
+              <span class="badge badge-active">گارد سرور فعال</span>
+            </div>
+
+            <!-- نقشه برداری SVG استان قزوین و محورهای هم‌جوار -->
+            <svg
+              viewBox="0 0 680 310"
+              role="img"
+              aria-label="نقشه شماتیک مناطق فعال استان قزوین و استان‌های هم‌جوار غیرفعال"
+              style="width:100%;height:auto;background:#090e1a;border-radius:0.75rem;border:1px solid #1e293b;"
+            >
+              <!-- استان‌های هم‌جوار غیرفعال -->
+              <rect x="18" y="20" width="145" height="95" rx="12" fill="#1e293b" stroke="#475569" stroke-dasharray="5 4" />
+              <text x="90" y="62" fill="#94a3b8" font-size="13" font-weight="bold" text-anchor="middle">زنجان (preparing)</text>
+              <text x="90" y="84" fill="#ef4444" font-size="11" text-anchor="middle">مسدود در سرور (422)</text>
+
+              <rect x="245" y="12" width="190" height="58" rx="12" fill="#1e293b" stroke="#475569" stroke-dasharray="5 4" />
+              <text x="340" y="38" fill="#94a3b8" font-size="12" font-weight="bold" text-anchor="middle">گیلان (inactive) — مسدود (422)</text>
+
+              <rect x="515" y="85" width="148" height="105" rx="12" fill="#1e293b" stroke="#f59e0b" stroke-dasharray="5 4" />
+              <text x="589" y="128" fill="#fde68a" font-size="13" font-weight="bold" text-anchor="middle">البرز (pending)</text>
+              <text x="589" y="150" fill="#fca5a5" font-size="11" text-anchor="middle">نیازمند مصوبه مدیر ارشد</text>
+
+              <rect x="515" y="205" width="148" height="82" rx="12" fill="#1e293b" stroke="#475569" stroke-dasharray="5 4" />
+              <text x="589" y="245" fill="#94a3b8" font-size="12" font-weight="bold" text-anchor="middle">تهران (preparing)</text>
+              <text x="589" y="265" fill="#ef4444" font-size="11" text-anchor="middle">مسدود در سرور (422)</text>
+
+              <rect x="18" y="195" width="145" height="92" rx="12" fill="#1e293b" stroke="#475569" stroke-dasharray="5 4" />
+              <text x="90" y="238" fill="#94a3b8" font-size="12" font-weight="bold" text-anchor="middle">همدان (inactive)</text>
+              <text x="90" y="258" fill="#ef4444" font-size="11" text-anchor="middle">مسدود در سرور (422)</text>
+
+              <!-- محدوده فعال استان قزوین -->
+              <rect x="182" y="82" width="315" height="205" rx="18" fill="rgba(16,185,129,0.14)" stroke="#10b981" stroke-width="2.5" />
+              <text x="340" y="108" fill="#6ee7b7" font-size="14" font-weight="bold" text-anchor="middle">استان قزوین — تنها استان فعال عملیاتی (ACTIVE)</text>
+
+              <!-- خطوط آزادراهی -->
+              <line x1="190" y1="165" x2="490" y2="165" stroke="#f59e0b" stroke-width="3" stroke-dasharray="8 4" />
+              <circle cx="340" cy="155" r="9" fill="#10b981" />
+              <text x="340" y="140" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">شهر قزوین (×1.00)</text>
+
+              <circle cx="385" cy="188" r="7" fill="#34d399" />
+              <text x="385" y="208" fill="#cbd5e1" font-size="11" text-anchor="middle">الوند و شهر صنعتی (×1.05)</text>
+
+              <circle cx="452" cy="165" r="7" fill="#fbbf24" />
+              <text x="448" y="185" fill="#fde68a" font-size="11" text-anchor="middle">آبیک / آزادراه شرق (×1.15)</text>
+
+              <circle cx="235" cy="165" r="7" fill="#fbbf24" />
+              <text x="242" y="185" fill="#fde68a" font-size="11" text-anchor="middle">تاکستان / آزادراه غرب (×1.15)</text>
+
+              <circle cx="340" cy="245" r="7" fill="#34d399" />
+              <text x="340" y="268" fill="#cbd5e1" font-size="11" text-anchor="middle">بوئین‌زهرا و محور جنوب (×1.10)</text>
+            </svg>
+
+            <div style="font-size:0.78rem;color:#cbd5e1;margin-top:0.85rem;">
+              برای مشاهده رفتار دقیق گارد سرور، ضریب تعرفه و ظرفیت هر منطقه روی دکمه‌های زیر کلیک کنید:
+            </div>
+            <div id="zone-buttons" class="zone-btn-grid"></div>
+          </div>
+
+          <div style="display:grid;gap:1rem;">
+            <div id="zone-detail-card" class="card"></div>
+
+            <div class="card">
+              <h3>پروتکل ۴ مرحله‌ای فعال‌سازی استان جدید توسط مدیر ارشد</h3>
+              <ol style="margin:0.4rem 0 0;padding-right:1.2rem;font-size:0.82rem;color:#334155;display:grid;gap:0.45rem;">
+                <li>تعریف شهرها و حداقل یک زون پوشش فعال در استان هدف در پنل <code class="mono">/admin/geography</code>.</li>
+                <li>جذب، بررسی مدارک و تأیید حداقل تعداد الزامی امدادگران بومی آن استان (<code class="mono">min_required_responders</code>).</li>
+                <li>ارسال درخواست فعال‌سازی با پرچم تأیید صریح مدیر ارشد (<code class="mono">explicitAdminConfirmation: true</code>) و درج دلیل رسمی مصوبه.</li>
+                <li>ثبت تغییرناپذیر در <code class="mono">geography_status_history</code> و <code class="mono">audit_logs</code>؛ ضمن آنکه قید <code class="mono">ON DELETE RESTRICT</code> مانع حذف سوابق تاریخی در صورت غیرفعال‌سازی بعدی می‌شود.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش ۲: معماری سیستم و ۱۶ دامنه کسب‌وکار -->
+    <section id="architecture" class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۲. معماری مهندسی سرتاسری</span>
+          <h2>معماری Modular Monolith تایپ‌اسکریپتی با ۱۶ دامنه مجزا و ۳۵ جدول تراکنشی</h2>
+          <p>
+            برای جلوگیری از پیچیدگی زودرس میکروسرویس‌های پراکنده در فاز راه‌اندازی قزوین و در عین حال حفظ
+            مرزبندی سخت‌گیرانه دامنه‌ها برای توسعه ملی، معماری سامانه در ۴ لایه ایزوله طراحی شده است:
+          </p>
+        </div>
+
+        <div class="arch-diagram">
+          <div class="arch-layers">
+            <div class="arch-layer">
+              <div class="arch-layer-title">لایه ۱ — رابط کاربری وب واکنش‌گرا (React 18 + React Router 7 + Vite 8 + Tailwind CSS 4)</div>
+              <div class="arch-layer-desc">
+                طراحی کاملاً فارسی (RTL) و Mobile-First برای شرایط اضطراری کنار جاده؛ شامل نقشه تعاملی انتخاب
+                مبدأ/مقصد قزوین، GPS مرورگر با Fallback ورود دستی نشانی، اشتراک بلادرنگ SSE، چاپ فاکتور رسمی و
+                پنل‌های تفکیک‌شده مشتری، امدادگر، اپراتور و مدیر ارشد بدون هیچ دکمه تزئینی یا بی‌عملکرد.
+              </div>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-title">لایه ۲ — دروازه API، امنیت و رویدادهای بلادرنگ (Express 4 + Zod 4 + Helmet + Rate Limiter + SSE)</div>
+              <div class="arch-layer-desc">
+                اعتبارسنجی طرح‌واره ورودی با Zod، احراز هویت کوکی <code class="mono">HttpOnly</code> و توکن Bearer،
+                میان‌افزار کنترل دسترسی نقش‌محور (<code class="mono">requireRole</code>)، محدودکننده نرخ درخواست
+                (Rate Limit) و گذرگاه بلادرنگ <code class="mono">RealtimeBus</code> روی مسیر <code class="mono">GET /api/events/stream</code>.
+              </div>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-title">لایه ۳ — هسته مشترک و ۱۶ سرویس دامنه کسب‌وکار (<code class="mono">src/shared/*</code> &amp; <code class="mono">src/server/modules/*</code>)</div>
+              <div class="arch-layer-desc">
+                ماشین وضعیت ۱۲حالته، موتور امتیازدهی دیسپچ هوشمند، فرمول ریاضی قیمت‌گذاری تومان صحیح، مدیریت
+                دفترکل کیف پول و تسویه شبا، تیکتینگ با یادداشت‌های محرمانه اپراتور و سرویس لاگ ممیزی/امنیتی.
+              </div>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-title">لایه ۴ — ذخیره‌سازی تراکنشی ACID و آداپتورهای بیرونی قابل تعویض (<code class="mono">node:sqlite</code> WAL + Pluggable Adapters)</div>
+              <div class="arch-layer-desc">
+                پایگاه‌داده بومی Node 22 در حالت <code class="mono">WAL</code> با قفل نوشتن فوری
+                <code class="mono">BEGIN IMMEDIATE</code> و <code class="mono">SAVEPOINT</code>، مهاجرت‌های برگشت‌پذیر
+                <code class="mono">.up.sql/.down.sql</code> با کنترل هش <code class="mono">SHA-256</code>، بکاپ آنلاین
+                <code class="mono">VACUUM INTO</code>، و آداپتورهای مجزای پرداخت (زرین‌پال / Sandbox) و پیامک (کاوه‌نگار / Sandbox Outbox).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:1rem;max-width:420px;" class="field">
+          <label for="domain-search">جستجوی سریع در میان ۱۶ دامنه و ۳۵ جدول دیتابیس:</label>
+          <input
+            type="text"
+            id="domain-search"
+            placeholder="مثال: dispatch، invoices، قزوین، audit، responder..."
+          />
+        </div>
+
+        <div id="domains-grid" class="grid-4"></div>
+      </div>
+    </section>
+
+    <!-- بخش ۳: چرخه حیات ۱۲حالته مأموریت و موتور دیسپچ هوشمند -->
+    <section id="lifecycle" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۳. عملیات زنده، ماشین وضعیت و دیسپچ</span>
+          <h2>کاوشگر تعاملی ۱۲ وضعیت رسمی مأموریت و الگوریتم تخصیص ضد تداخل</h2>
+          <p>
+            تمامی تغییر وضعیت‌های درخواست در سمت سرور توسط تابع
+            <code class="mono">assertValidStateTransition</code> کنترل شده و با نام اقدام‌کننده و زمان دقیق در
+            جدول <code class="mono">request_state_history</code> ماندگار می‌شوند. روی هر مرحله کلیک کنید:
+          </p>
+        </div>
+
+        <div id="state-machine-nodes" class="state-grid" role="tablist" aria-label="وضعیت‌های دوازده‌گانه مأموریت"></div>
+        <div id="state-inspector" class="card" style="margin-bottom:1.5rem;"></div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>الگوریتم چندمعیاره دیسپچ هوشمند</h3>
+            <p>
+              فیلتر اولیه بر اساس استان و زون فعال قزوین، تأییدیه ادمین (<code class="mono">approved</code>)، آنلاین
+              بودن، تطابق تخصص خدمت، نوع ناوگان (مثلاً <code class="mono">flatbed_tow</code> برای کفی) و گواهی
+              ولتاژ بالا برای خودروهای برقی؛ سپس رتبه‌بندی وزنی بر پایه فاصله Haversine، امتیاز رضایت مشتریان و
+              ظرفیت آزاد.
+            </p>
+          </div>
+          <div class="card">
+            <h3>ضدتکرار درخواست و قفل اتمیک پذیرش</h3>
+            <p>
+              پشتیبانی از هدر و فیلد <code class="mono">Idempotency-Key</code> مانع ثبت دوباره درخواست هنگام
+              کندی اینترنت موبایل در جاده می‌شود. همچنین پذیرش مأموریت با شرط اتمیک داخل تراکنش
+              <code class="mono">BEGIN IMMEDIATE</code> اجرا می‌شود تا دو امدادگر هرگز نتوانند هم‌زمان یک مأموریت
+              را بپذیرند.
+            </p>
+          </div>
+          <div class="card">
+            <h3>رفتار صادقانه در نبود امدادگر آزاد</h3>
+            <p>
+              اگر در لحظه ثبت درخواست، امدادگر واجد شرایطی آنلاین نباشد، سامانه هیچ شمارش معکوس یا زمان رسیدن
+              (ETA) غیرواقعی نمایش نمی‌دهد؛ پرونده با پرچم
+              <code class="mono">operator_escalation_required = 1</code> برجسته شده و اپراتور مرکز پیام قزوین
+              تخصیص دستی را انجام می‌دهد.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش ۴: شبیه‌ساز زنده قیمت‌گذاری تومان و معماری مالی -->
+    <section id="pricing" class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۴. شفافیت مالی و پیشگیری از خطای ریال/تومان</span>
+          <h2>شبیه‌ساز زنده فرمول رسمی تعرفه «اورژانس خودرو» (بر پایه تومان صحیح)</h2>
+          <p>
+            تمامی مبالغ در دیتابیس و API با واحد صریح <strong>تومان صحیح (<code class="mono">INTEGER _toman</code>)</strong>
+            ذخیره می‌شوند و تبدیل به ریال (<code class="mono">tomanToRial = amount × 10</code>) منحصراً در مرز
+            ارسال به درگاه بانکی انجام می‌گیرد. فرمول واقعی سامانه را در زیر آزمایش کنید:
+          </p>
+        </div>
+
+        <div class="calc-grid">
+          <div class="card">
+            <div class="form-row">
+              <div class="field">
+                <label for="calc-service">انتخاب خدمت از کاتالوگ ۱۵گانه:</label>
+                <select id="calc-service"></select>
+              </div>
+              <div class="field">
+                <label for="calc-zone">منطقه عملیاتی در استان قزوین:</label>
+                <select id="calc-zone">
+                  <option value="1.00">محدوده شهری قزوین (ضریب ۱.۰۰)</option>
+                  <option value="1.05">الوند، شهر صنعتی البرز، تاکستان یا آبیک (ضریب ۱.۰۵)</option>
+                  <option value="1.10">بوئین‌زهرا و محور جنوبی (ضریب ۱.۱۰)</option>
+                  <option value="1.15">آزادراه قزوین-کرج / قزوین-زنجان (ضریب ۱.۱۵)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="calc-vehicle">رده خودروی مشتری:</label>
+                <select id="calc-vehicle">
+                  <option value="domestic">خودروی سواری داخلی (ضریب ۱.۰۰)</option>
+                  <option value="suv_heavy">شاسی‌بلند سنگین / وانت (ضریب ۱.۲۰)</option>
+                  <option value="foreign">خودروی خارجی / وارداتی (ضریب ۱.۲۵)</option>
+                  <option value="electric">خودروی برقی / هیبریدی EV (ضریب ۱.۳۵)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="calc-dispatch-km">مسافت اعزام امدادگر تا خودرو (کیلومتر):</label>
+                <input type="number" id="calc-dispatch-km" min="0" max="100" value="8" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="calc-tow-km">مسافت حمل به مقصد (ویژه خدمات یدک‌کش/کفی - km):</label>
+                <input type="number" id="calc-tow-km" min="0" max="300" value="10" />
+              </div>
+              <div class="field">
+                <label for="calc-parts">بهای قطعات مصرفی در گزارش پایان کار (تومان):</label>
+                <input type="number" id="calc-parts" min="0" step="50000" value="0" />
+              </div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:1.25rem;padding-top:0.5rem;font-size:0.83rem;font-weight:700;">
+              <label style="cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+                <input type="checkbox" id="calc-night" />
+                شرایط شبانه (۲۲ تا ۰۶) یا درخواست فوری (ضریب ×۱.۲۰)
+              </label>
+              <label style="cursor:pointer;display:flex;align-items:center;gap:0.4rem;color:#059669;">
+                <input type="checkbox" id="calc-discount" checked />
+                اعمال کد تخفیف راه‌اندازی قزوین (<span class="mono">QAZVIN1405</span> — ۱۰٪ تا سقف ۱۵۰ هزار تومان)
+              </label>
+            </div>
+          </div>
+
+          <div id="calc-output" class="invoice-preview" aria-live="polite"></div>
+        </div>
+
+        <div class="grid-3" style="margin-top:1.35rem;">
+          <div class="card">
+            <h3>استعلام سمت سرور Callback بانکی</h3>
+            <p>
+              پارامتر <code class="mono">Status=OK</code> مرورگر هرگز ملاک موفقیت پرداخت نیست؛ سرور مستقیماً با
+              درگاه پرداخت استعلام مبلغ دقیق ریالی را انجام داده و با شرط اتمیک
+              <code class="mono">WHERE status = 'pending'</code> از ثبت تکراری تراکنش جلوگیری می‌کند.
+            </p>
+          </div>
+          <div class="card">
+            <h3>بازپرداخت (Refund) و دفترکل تغییرناپذیر</h3>
+            <p>
+              پشتیبانی از بازپرداخت کامل یا جزئی توسط مدیر ارشد همراه با ثبت سند اصلاحی خودکار در جدول
+              <code class="mono">wallet_ledger_entries</code> تا تراز مالی پلتفرم و کیف پول امدادگر همواره منطبق
+              باشند.
+            </p>
+          </div>
+          <div class="card">
+            <h3>تسویه شبا و بدهی مجاز اضطراری</h3>
+            <p>
+              امدادگران با ثبت شبای معتبر ۲۴ رقمی (<code class="mono">IR...</code>) درخواست تسویه ثبت می‌کنند.
+              همچنین در صورت قطعی شبکه بانکی در جاده، اپراتور امکان ثبت مهلت پرداخت اضطراری
+              (<code class="mono">approved_debt</code>) را دارد.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش ۵: کاتالوگ ۱۵ خدمت امدادی -->
+    <section id="catalog" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۵. خدمات تخصصی امداد خودرو</span>
+          <h2>کاتالوگ کامل ۱۵ خدمت استاندارد قابل پیکربندی در پنل مدیریت</h2>
+          <p>
+            هر خدمت دارای نرخ پایه، کیلومتر رایگان اولیه، نرخ اعزام و حمل، تجهیزات الزامی ناوگان، قواعد ایمنی و
+            هزینه لغو پس از حرکت امدادگر است و تمامی تغییرات آن در <code class="mono">service_audit_logs</code> ثبت می‌شود.
+          </p>
+        </div>
+
+        <div id="catalog-filters" class="zone-btn-grid" style="margin:0 0 1.35rem;">
+          <button type="button" class="chip-btn active" data-cat="all">همه خدمات (۱۵)</button>
+          <button type="button" class="chip-btn" data-cat="battery_electrical">باتری و برق</button>
+          <button type="button" class="chip-btn" data-cat="tire_wheel">چرخ و لاستیک</button>
+          <button type="button" class="chip-btn" data-cat="fuel_lock">سوخت‌رسانی و بازگشایی مجاز</button>
+          <button type="button" class="chip-btn" data-cat="diagnostics_repair">عیب‌یابی و تعمیرات در محل</button>
+          <button type="button" class="chip-btn" data-cat="towing_transport">یدک‌کش و کفی خودروبر</button>
+          <button type="button" class="chip-btn" data-cat="specialized_fleet">تخصصی وارداتی و برقی (EV)</button>
+        </div>
+
+        <div id="services-catalog-grid" class="grid-3"></div>
+      </div>
+    </section>
+
+    <!-- بخش ۶: نقش‌های چهارگانه، امنیت سرور و حریم خصوصی -->
+    <section id="security" class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۶. امنیت، حریم خصوصی و کنترل دسترسی (RBAC)</span>
+          <h2>جداسازی کامل اختیارات ۴ نقش کاربری در لایه سرور و پایگاه‌داده</h2>
+          <p>
+            مخفی‌سازی دکمه‌ها در رابط کاربری هرگز امنیت محسوب نمی‌شود؛ تمامی مجوزها در میان‌افزار و لایه سرویس
+            سرور بررسی شده و تلاش‌های غیرمجاز در جدول <code class="mono">security_events</code> ثبت می‌گردند.
+          </p>
+        </div>
+
+        <div class="table-wrap" style="margin-bottom:1.5rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>نقش کاربری</th>
+                <th>مسیر اختصاصی وب</th>
+                <th>اختیارات کلیدی</th>
+                <th>محدودیت‌ها و قفل‌های امنیتی سمت سرور</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>مشتری (<span class="mono">customer</span>)</strong></td>
+                <td class="mono">/customer, /request/new, /missions/:id/track</td>
+                <td>مدیریت خودروها، ثبت درخواست با نقشه/GPS/نشانی دستی، مشاهده پیش‌فاکتور، ردیابی زنده امدادگر، تأیید تغییر قیمت، پرداخت، چاپ فاکتور، امتیازدهی و ثبت شکایت.</td>
+                <td>عدم دسترسی به خودروها، مأموریت‌ها، پیوست‌های خصوصی یا تیکت‌های سایر مشتریان (ضد IDOR)؛ عدم رویت یادداشت‌های داخلی اپراتور.</td>
+              </tr>
+              <tr>
+                <td><strong>امدادگر (<span class="mono">responder</span>)</strong></td>
+                <td class="mono">/responder, /responder/missions, /responder/earnings, /responder/setup</td>
+                <td>بارگذاری مدارک هویتی/فنی/گواهی EV، تنظیم محدوده و تخصص، پذیرش اتمیک پیشنهاد، ارسال موقعیت زنده GPS، ثبت گزارش فنی پایان کار و درخواست تسویه شبا.</td>
+                <td><strong>قفل مطلق عملیاتی تا پیش از تأیید مدارک و فعال‌سازی مدیر ارشد</strong>؛ عدم مشاهده تلفن و آدرس دقیق مشتری پیش از پذیرش و سانسور مجدد آن پس از اتمام مأموریت.</td>
+              </tr>
+              <tr>
+                <td><strong>اپراتور پشتیبانی (<span class="mono">operator</span>)</strong></td>
+                <td class="mono">/operator</td>
+                <td>پایش صف زنده مأموریت‌ها، دیسپچ مجدد یا تخصیص دستی موارد بدون امدادگر، ثبت مهلت پرداخت اضطراری، ثبت یادداشت داخلی محرمانه و حل‌وفصل یا ارجاع شکایات.</td>
+                <td>اصل حداقل دسترسی: فاقد مجوز فعال‌سازی استان جدید، تغییر ضرایب کلان تعرفه، صدور بازپرداخت بانکی یا ایجاد کاربر مدیر ارشد.</td>
+              </tr>
+              <tr>
+                <td><strong>مدیر ارشد (<span class="mono">admin</span>)</strong></td>
+                <td class="mono">/admin/:section (۸ ماژول مدیریتی)</td>
+                <td>داشبورد KPI، تأیید/تعلیق امدادگران و گواهی EV، مدیریت کاتالوگ و ضرایب تعرفه، فعال‌سازی ممیزی‌شده استان‌ها و زون‌ها، بازپرداخت، تسویه شبا، تنظیمات و ممیزی امنیتی.</td>
+                <td>ثبت اجباری تمامی اقدامات حساس در <code class="mono">audit_logs</code>؛ ممانعت سرور از غیرفعال‌سازی حساب فعال خودِ مدیر کل.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>رمزنگاری نشست و گذرواژه</h3>
+            <p>
+              گذرواژه‌ها با <code class="mono">crypto.scryptSync</code> و Salt تصادفی ۱۶ بایتی هش و با
+              <code class="mono">timingSafeEqual</code> بررسی می‌شوند. توکن نشست نیز پیش از ذخیره در دیتابیس با
+              <code class="mono">SHA-256</code> هش می‌گردد.
+            </p>
+          </div>
+          <div class="card">
+            <h3>ذخیره‌سازی خصوصی مستندات</h3>
+            <p>
+              تصاویر خودرو و مدارک با بررسی نوع MIME مجاز و سقف حجم، با نام تصادفی در مسیر خصوصی
+              <code class="mono">storage/private/</code> (خارج از پوشه عمومی وب) ذخیره شده و صرفاً پس از احراز
+              مالکیت رکورد سرو می‌شوند.
+            </p>
+          </div>
+          <div class="card">
+            <h3>قفل پیکربندی محیط Production</h3>
+            <p>
+              ماژول <code class="mono">src/server/config/env.ts</code> در حالت <code class="mono">APP_ENV=production</code>
+              در صورت کوتاه بودن کلید نشست، فعال بودن داده آزمایشی (<code class="mono">DEV_SEED</code>) یا باقی
+              ماندن درگاه روی Sandbox بالا آمدن سرور را متوقف می‌کند.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش ۷: تست‌های خودکار، CI/CD، راه‌اندازی و شفافیت حقوقی -->
+    <section id="testing" class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">۷. تضمین کیفیت، CI/CD و بهره‌برداری</span>
+          <h2>پوشش ۱۵ مجموعه تست خودکار یکپارچه، مهاجرت‌های برگشت‌پذیر و راهنمای اجرا</h2>
+          <p>
+            تمامی سناریوهای حیاتی امنیتی، مالی، جغرافیایی و هم‌زمانی در فایل
+            <code class="mono">tests/platform.test.ts</code> با Vitest و Supertest به‌صورت خودکار در هر اجرای
+            گردش‌کار GitHub Actions (<code class="mono">.github/workflows/ci.yml</code>) آزمایش می‌شوند:
+          </p>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:1.5rem;">
+          <div class="card">
+            <h3>فهرست ۱۵ سناریوی آزمون خودکار پاس‌شده</h3>
+            <ol style="margin:0.4rem 0 0;padding-right:1.25rem;font-size:0.8rem;color:#334155;display:grid;gap:0.32rem;">
+              <li>صحت ریاضی فرمول قیمت‌گذاری، ضرایب، سقف تخفیف، مالیات و تبدیل تومان/ریال.</li>
+              <li>ثبت‌نام، نرمال‌سازی ارقام فارسی موبایل، ابطال نشست و مسدودسازی ثبت‌نام خودسرانه نقش ادمین.</li>
+              <li>کنترل دسترسی سمت سرور (RBAC)، قفل امدادگر تأییدنشده و حفاظت در برابر IDOR.</li>
+              <li>مسدودسازی استان‌های غیرفعال (۴۲۲) و الزام تأیید صریح مدیر ارشد برای فعال‌سازی استان جدید.</li>
+              <li>کلید ضدتکرار <code class="mono">Idempotency-Key</code> و جلوگیری اتمیک از پذیرش هم‌زمان دو امدادگر.</li>
+              <li>چرخه کامل مأموریت تا گزارش پایان کار، پرداخت ایمن، ضدتکرار Callback، بازپرداخت و تسویه شبا.</li>
+              <li>ثبت شکایت، محرمانگی یادداشت داخلی اپراتور و ارجاع پرونده به <code class="mono">UnderSupportReview</code>.</li>
+              <li>تاب‌آوری در برابر خطای پنل پیامک خارجی، تلاش مجدد، بکاپ دیتابیس و Rollback مهاجرت‌ها.</li>
+              <li>قوانین لغو رایگان پیش از حرکت و اعمال جریمه ایاب‌وذهاب پس از حرکت امدادگر (<code class="mono">EnRoute</code>).</li>
+              <li>رفتار صادقانه در نبود امدادگر آزاد (بدون ETA کاذب) و تخصیص دستی توسط اپراتور.</li>
+              <li>الزام تأیید مالکیت در بازگشایی در خودرو، الزام مقصد برای یدک‌کش و قفل‌های محیط Production.</li>
+              <li>عدم نشت یادداشت‌های محرمانه اپراتور به مشتری و صحت گزارش‌های مدیریتی و ممیزی.</li>
+              <li>استعلام عمومی ایمن کد رهگیری بدون نشت اطلاعات شخصی/مکانی و ویرایش تنظیمات سیستمی ادمین.</li>
+              <li>احراز هویت الزامی جریان بلادرنگ SSE و جداسازی نقش‌محور ارسال رویدادها در <code class="mono">RealtimeBus</code>.</li>
+              <li>صحت بسته ایستا معرفی پروژه در GitHub Pages (<code class="mono">site/</code> و <code class="mono">.github/workflows/pages.yml</code>).</li>
+            </ol>
+          </div>
+
+          <div style="display:grid;gap:1rem;align-content:start;">
+            <div class="card">
+              <h3>راه‌اندازی سریع، تست و عملیات پایگاه‌داده</h3>
+              <pre class="code-box"><code># 1. کلون و نصب وابستگی‌های قفل‌شده (۰ آسیب‌پذیری)
+git clone https://github.com/rahmaniho/EMSCar.git
+cd EMSCar
+npm ci
+
+# 2. اجرای مهاجرت‌ها و داده نمونه محیط توسعه (قزوین)
+npm run db:migrate
+npm run db:seed:dev
+
+# 3. اجرای سرور یکپارچه توسعه روی پورت 3000
+npm run dev
+
+# 4. اجرای کامل تایپ‌چک، تست‌های خودکار و بیلد Production
+npm run typecheck
+npm test
+npm run build
+
+# 5. تهیه بکاپ اتمیک آنلاین و بازگردانی ایمن Migration
+npm run db:backup
+npm run db:rollback</code></pre>
+            </div>
+
+            <div class="card">
+              <h3>شفافیت محدودیت‌های فعلی و نقشه راه مقیاس ملی</h3>
+              <p>
+                <strong>۱. حالت آزمایشی پیش‌فرض درگاه و پیامک:</strong> بدون تنظیم کلیدهای تجاری زرین‌پال و
+                کاوه‌نگار در فایل <code class="mono">.env</code>، سامانه صادقانه با بنر هشدار صریح در حالت
+                Sandbox کار می‌کند و هیچ تراکنش واقعی شبیه‌سازی دروغین نمی‌شود.<br />
+                <strong>۲. مقیاس‌پذیری چندسروره ۳۱ استان:</strong> موتور <code class="mono">node:sqlite</code> در
+                حالت WAL برای استقرار تک‌سروره استان قزوین و استان‌های هم‌جوار بسیار سریع و پایدار است؛ برای
+                کلاستر افقی چندسروره در مقیاس کل کشور، مهاجرت لایه داده به
+                <strong>PostgreSQL + PostGIS</strong> و جایگزینی حافظه SSE با <strong>Redis Pub/Sub</strong> گام
+                مهندسی فاز توسعه ملی است.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- کادر شفافیت حقوقی و نظارتی ایران -->
+        <div class="alert-legal">
+          <strong>ملاحظات حقوقی، صنفی و نظارتی در ایران (فرضیات نیازمند بررسی حقوقی رسمی):</strong>
+          موارد مربوط به اخذ نماد اعتماد الکترونیکی (اینماد)، مجوزهای اتحادیه صنفی امدادخودرو، پلیس راهور و
+          سازمان راهداری و حمل‌ونقل جاده‌ای در محورهای استان قزوین، نرخ و قالب صورتحساب الکترونیکی سامانه مؤدیان
+          مالیاتی، سیاست دوره نگهداری داده‌های مکانی/هویتی و استعلام ثبت علامت تجاری پیش از استفاده تجاری از نام
+          پیشنهادی انگلیسی <em>Auto Emergency</em> در کنار نام اصلی <strong>«اورژانس خودرو»</strong>، صرفاً بر
+          پایه مفروضات متداول مهندسی نرم‌افزار لحاظ شده‌اند و <strong>مشاوره حقوقی قطعی محسوب نمی‌شوند</strong>؛
+          بررسی و تأیید مشاور حقوقی رسمی پیش از بهره‌برداری عمومی الزامی است.
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <strong style="color:#fff;">سامانه جامع «اورژانس خودرو»</strong> — مستندات معرفی محصول و معماری در
+          GitHub Pages
+        </div>
+        <div style="display:flex;gap:1.2rem;">
+          <a href="https://github.com/rahmaniho/EMSCar" target="_blank" rel="noopener noreferrer" style="color:#fbbf24;">مخزن GitHub</a>
+          <a href="#top">بازگشت به بالا ↑</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

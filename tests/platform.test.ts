@@ -1121,4 +1121,34 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     cleanOp();
     expect(ctx.services.realtimeBus.getConnectedCount()).toBe(0);
   });
+
+  it('۱۵. بسته ایستا معرفی پروژه در GitHub Pages (site/ و مسیرهای /showcase و /EMSCar) کامل، معتبر و منطبق با اصول شفافیت است', async () => {
+    expect(fs.existsSync(path.resolve(process.cwd(), 'site/.nojekyll'))).toBe(true);
+    expect(
+      fs.existsSync(path.resolve(process.cwd(), '.github/workflows/pages.yml'))
+    ).toBe(true);
+
+    const htmlRes = await request(ctx.app).get('/showcase/').expect(200);
+    expect(htmlRes.headers['content-type']).toMatch(/html/);
+    expect(htmlRes.text).toContain('اورژانس خودرو');
+    expect(htmlRes.text).toContain('Auto Emergency');
+    expect(htmlRes.text).toContain('استان قزوین');
+    expect(htmlRes.text).toContain('تومان');
+    expect(htmlRes.text).toContain('مشاوره حقوقی قطعی محسوب نمی‌شوند');
+
+    // سازگاری کامل با زیرمسیر مخزن در GitHub Pages (/EMSCar/)
+    const ghPathRes = await request(ctx.app).get('/EMSCar/').expect(200);
+    expect(ghPathRes.text).toContain('اورژانس خودرو');
+
+    const cssRes = await request(ctx.app).get('/showcase/styles.css').expect(200);
+    expect(cssRes.headers['content-type']).toMatch(/css/);
+
+    const jsRes = await request(ctx.app).get('/showcase/app.js').expect(200);
+    expect(jsRes.text).toContain('QAZVIN1405');
+    expect(jsRes.text).toContain('DOMAINS_16');
+    expect(jsRes.text).toContain('MISSION_STATES_12');
+    expect(jsRes.text).toContain('SERVICES_15');
+
+    await request(ctx.app).get('/showcase/404.html').expect(200);
+  });
 });

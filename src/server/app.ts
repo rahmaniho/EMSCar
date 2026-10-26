@@ -1,3 +1,4 @@
+import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -270,6 +271,11 @@ export function createAppContext(options?: CreateAppOptions) {
   app.use('/api', (_req, _res, next) => {
     next(new AppError(404, 'API_ROUTE_NOT_FOUND', 'مسیر API درخواستی وجود ندارد.'));
   });
+
+  // سرو مستقیم نسخه ایستا صفحه معرفی GitHub Pages در پیش‌نمایش و سرور یکپارچه
+  const showcaseDir = path.resolve(process.cwd(), 'site');
+  app.use('/showcase', express.static(showcaseDir));
+  app.use('/EMSCar', express.static(showcaseDir));
 
   const attachErrorHandler = () => {
     app.use(createErrorHandler({ isProduction: config.isProduction }));
