@@ -1122,7 +1122,7 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     expect(ctx.services.realtimeBus.getConnectedCount()).toBe(0);
   });
 
-  it('۱۵. بسته ایستا معرفی پروژه در GitHub Pages (site/ و مسیرهای /showcase و /EMSCar) کامل، معتبر و منطبق با اصول شفافیت است', async () => {
+  it('۱۵. بسته تعاملی اسلایدی، بیزینس‌پلن و شبیه‌ساز تصویری GitHub Pages (site/ و مسیرهای /showcase و /EMSCar) کامل و معتبر است', async () => {
     expect(fs.existsSync(path.resolve(process.cwd(), 'site/.nojekyll'))).toBe(true);
     expect(
       fs.existsSync(path.resolve(process.cwd(), '.github/workflows/pages.yml'))
@@ -1134,6 +1134,8 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     expect(htmlRes.text).toContain('Auto Emergency');
     expect(htmlRes.text).toContain('استان قزوین');
     expect(htmlRes.text).toContain('تومان');
+    expect(htmlRes.text).toContain('اسلاید ۱ از ۱۲');
+    expect(htmlRes.text).toContain('اسلاید ۱۲ از ۱۲');
     expect(htmlRes.text).toContain('مشاوره حقوقی قطعی محسوب نمی‌شوند');
 
     // سازگاری کامل با زیرمسیر مخزن در GitHub Pages (/EMSCar/)
@@ -1145,9 +1147,27 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
 
     const jsRes = await request(ctx.app).get('/showcase/app.js').expect(200);
     expect(jsRes.text).toContain('QAZVIN1405');
+    expect(jsRes.text).toContain('WALKTHROUGH_STEPS_8');
+    expect(jsRes.text).toContain('SIM_SCENARIOS');
     expect(jsRes.text).toContain('DOMAINS_16');
-    expect(jsRes.text).toContain('MISSION_STATES_12');
     expect(jsRes.text).toContain('SERVICES_15');
+    expect(jsRes.text).toContain('updateBusinessPlanModel');
+
+    // راستی‌آزمایی وجود و سرو صحیح تمامی تصاویر اختصاصی مراحل عملیات
+    for (const imgName of [
+      'hero-qazvin-dispatch.jpg',
+      'step1-mobile-sos.jpg',
+      'step2-control-center.jpg',
+      'step3-onsite-diagnostics.jpg',
+      'step4-flatbed-tow.jpg',
+      'step5-ev-specialist.jpg',
+      'step6-payment-invoice.jpg',
+    ]) {
+      const imgRes = await request(ctx.app)
+        .get(`/showcase/assets/${imgName}`)
+        .expect(200);
+      expect(imgRes.headers['content-type']).toMatch(/jpeg/);
+    }
 
     await request(ctx.app).get('/showcase/404.html').expect(200);
   });

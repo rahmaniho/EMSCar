@@ -29,6 +29,13 @@ jobs:
           test -f site/styles.css
           test -f site/app.js
           test -f site/404.html
+          test -s site/assets/hero-qazvin-dispatch.jpg
+          test -s site/assets/step1-mobile-sos.jpg
+          test -s site/assets/step2-control-center.jpg
+          test -s site/assets/step3-onsite-diagnostics.jpg
+          test -s site/assets/step4-flatbed-tow.jpg
+          test -s site/assets/step5-ev-specialist.jpg
+          test -s site/assets/step6-payment-invoice.jpg
           node --check site/app.js
 
       - name: Configure GitHub Pages
