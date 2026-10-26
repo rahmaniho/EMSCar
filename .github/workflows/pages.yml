@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages — معرفی سامانه اورژانس خودرو
+name: Deploy GitHub Pages — طرح کسب‌وکار تعاملی اورژانس خودرو (EMSCar)
 
 on:
   push:
@@ -16,19 +16,24 @@ concurrency:
 
 jobs:
   build:
-    name: Validate & Upload GitHub Pages Bundle
+    name: Validate & Upload 26-Slide Pitch Deck Bundle
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify GitHub Pages static showcase files
+      - name: Verify GitHub Pages static deck, modules, fonts & assets
         run: |
           test -f site/.nojekyll
           test -f site/index.html
           test -f site/styles.css
           test -f site/app.js
+          test -f site/data/slides.js
+          test -f site/data/financial-model.js
+          test -f site/components/charts.js
           test -f site/404.html
+          test -s site/assets/favicon.svg
+          test -s site/assets/fonts/Vazirmatn-VF.woff2
           test -s site/assets/hero-qazvin-dispatch.jpg
           test -s site/assets/step1-mobile-sos.jpg
           test -s site/assets/step2-control-center.jpg
@@ -37,6 +42,9 @@ jobs:
           test -s site/assets/step5-ev-specialist.jpg
           test -s site/assets/step6-payment-invoice.jpg
           node --check site/app.js
+          node --check site/data/slides.js
+          node --check site/data/financial-model.js
+          node --check site/components/charts.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

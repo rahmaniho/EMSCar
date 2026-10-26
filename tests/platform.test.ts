@@ -1122,7 +1122,7 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     expect(ctx.services.realtimeBus.getConnectedCount()).toBe(0);
   });
 
-  it('۱۵. بسته تعاملی اسلایدی، بیزینس‌پلن و شبیه‌ساز تصویری GitHub Pages (site/ و مسیرهای /showcase و /EMSCar) کامل و معتبر است', async () => {
+  it('۱۵. وب‌اپلیکیشن ۲۶ اسلایدی طرح کسب‌وکار تعاملی (site/ و مسیرهای /showcase و /EMSCar) کامل و معتبر سرو می‌شود', async () => {
     expect(fs.existsSync(path.resolve(process.cwd(), 'site/.nojekyll'))).toBe(true);
     expect(
       fs.existsSync(path.resolve(process.cwd(), '.github/workflows/pages.yml'))
@@ -1130,28 +1130,41 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
 
     const htmlRes = await request(ctx.app).get('/showcase/').expect(200);
     expect(htmlRes.headers['content-type']).toMatch(/html/);
-    expect(htmlRes.text).toContain('اورژانس خودرو');
+    expect(htmlRes.text).toContain('اورژانس خودرو | EMSCar');
     expect(htmlRes.text).toContain('Auto Emergency');
     expect(htmlRes.text).toContain('استان قزوین');
     expect(htmlRes.text).toContain('تومان');
-    expect(htmlRes.text).toContain('اسلاید ۱ از ۱۲');
-    expect(htmlRes.text).toContain('اسلاید ۱۲ از ۱۲');
+    expect(htmlRes.text).toContain('اسلاید ۱ از ۲۶');
     expect(htmlRes.text).toContain('مشاوره حقوقی قطعی محسوب نمی‌شوند');
 
     // سازگاری کامل با زیرمسیر مخزن در GitHub Pages (/EMSCar/)
     const ghPathRes = await request(ctx.app).get('/EMSCar/').expect(200);
-    expect(ghPathRes.text).toContain('اورژانس خودرو');
+    expect(ghPathRes.text).toContain('اورژانس خودرو | EMSCar');
 
     const cssRes = await request(ctx.app).get('/showcase/styles.css').expect(200);
     expect(cssRes.headers['content-type']).toMatch(/css/);
 
-    const jsRes = await request(ctx.app).get('/showcase/app.js').expect(200);
-    expect(jsRes.text).toContain('QAZVIN1405');
-    expect(jsRes.text).toContain('WALKTHROUGH_STEPS_8');
-    expect(jsRes.text).toContain('SIM_SCENARIOS');
-    expect(jsRes.text).toContain('DOMAINS_16');
-    expect(jsRes.text).toContain('SERVICES_15');
-    expect(jsRes.text).toContain('updateBusinessPlanModel');
+    // بررسی ماژول‌های تفکیک‌شده داده، مدل مالی، نمودارها و کنترلر ارائه
+    for (const modPath of [
+      '/showcase/app.js',
+      '/showcase/data/slides.js',
+      '/showcase/data/financial-model.js',
+      '/showcase/components/charts.js',
+    ]) {
+      const modRes = await request(ctx.app).get(modPath).expect(200);
+      expect(modRes.headers['content-type']).toMatch(/javascript/);
+    }
+
+    // بررسی فونت محلی Vazirmatn و فاوآیکون اختصاصی برند
+    const fontRes = await request(ctx.app)
+      .get('/showcase/assets/fonts/Vazirmatn-VF.woff2')
+      .expect(200);
+    expect(Number(fontRes.headers['content-length'])).toBeGreaterThan(50000);
+
+    const iconRes = await request(ctx.app)
+      .get('/showcase/assets/favicon.svg')
+      .expect(200);
+    expect(iconRes.headers['content-type']).toMatch(/svg/);
 
     // راستی‌آزمایی وجود و سرو صحیح تمامی تصاویر اختصاصی مراحل عملیات
     for (const imgName of [
@@ -1170,5 +1183,84 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     }
 
     await request(ctx.app).get('/showcase/404.html').expect(200);
+  });
+
+  it('۱۶. ساختار داده ۲۶ اسلاید، وضعیت‌های ۵گانه شفافیت داده، ۱۱ ریسک و ۱۳ شاخص KPI کامل است', async () => {
+    const slidesMod = await import('../site/data/slides.js');
+    expect(slidesMod.SLIDES_META).toHaveLength(26);
+    expect(Object.keys(slidesMod.DATA_STATUS_META)).toEqual([
+      'verified',
+      'estimated',
+      'assumption',
+      'proposed',
+      'unknown',
+    ]);
+    expect(slidesMod.RISKS_11).toHaveLength(11);
+    expect(slidesMod.KPIS_13).toHaveLength(13);
+
+    slidesMod.SLIDES_META.forEach((s, idx) => {
+      expect(s.order).toBe(idx + 1);
+      expect(typeof s.title).toBe('string');
+      expect(s.title.length).toBeGreaterThan(5);
+      expect(typeof s.takeaway).toBe('string');
+      expect(s.takeaway.length).toBeGreaterThan(15);
+      expect(typeof s.source).toBe('string');
+      expect(typeof s.notes).toBe('string');
+      expect(slidesMod.DATA_STATUS_META[s.dataStatus]).toBeTruthy();
+    });
+  });
+
+  it('۱۷. موتور مالی تومان/ریال، اقتصاد واحد (LTV مبتنی بر حاشیه سود)، پیش‌بینی ۳ سناریویی و نمودارهای SVG دقیق عمل می‌کنند', async () => {
+    const fin = await import('../site/data/financial-model.js');
+    const charts = await import('../site/components/charts.js');
+
+    expect(fin.SERVICES_CATALOG_15).toHaveLength(15);
+
+    const quote = fin.calculateOfficialQuote({
+      serviceSlug: 'towing',
+      zoneMultiplier: 1.15,
+      vehicleType: 'suv_heavy',
+      dispatchKm: 10,
+      towKm: 20,
+      isUrgentNight: false,
+      partsToman: 200000,
+      hasWelcomeDiscount: true,
+    });
+    expect(quote.totalRial).toBe(quote.totalToman * 10);
+    expect(quote.discountToman).toBeLessThanOrEqual(150000);
+    // کمیسیون ۱۵٪ صرفاً روی اجرت خالص است نه قطعه مصرفی
+    expect(quote.platformCommissionToman).toBe(Math.round(quote.netServiceToman * 0.15));
+
+    const ue = fin.computeUnitEconomics({
+      avgOrderServiceToman: 600000,
+      commissionRatePct: 15,
+      directVariableCostPerOrderToman: 20000,
+      monthlyMarketingSpendToman: 14000000,
+      monthlyNewCustomers: 100,
+      annualOrdersPerCustomer: 2.0,
+      avgCustomerRetentionYears: 2.0,
+    });
+    // LTV باید دقیقاً بر مبنای سود ناخالص سهم پلتفرم محاسبه شود (۷۰ هزار × ۴ = ۲۸۰ هزار تومان)
+    expect(ue.grossProfitPerOrder).toBe(70000);
+    expect(ue.ltvToman).toBe(280000);
+    expect(ue.ltvToCac).toBeCloseTo(2.0, 2);
+
+    const fc = fin.computeThreeScenarios12M({});
+    expect(fc.base.months).toHaveLength(12);
+    expect(fc.growth.totalOrdersYear1).toBeGreaterThan(fc.conservative.totalOrdersYear1);
+
+    const be = fin.computeBreakEvenAndSensitivity({});
+    expect(be.baseline.breakEvenOrders).toBeGreaterThan(0);
+    expect(be.levers).toHaveLength(6);
+    expect(be.mostSensitiveVariable.length).toBeGreaterThan(3);
+
+    // راستی‌آزمایی تولید SVG معتبر و دسترس‌پذیر در تمام توابع نمودار
+    expect(charts.renderForecastTrendSvg(fc.base)).toContain('<svg');
+    expect(charts.renderScenarioBarsSvg(fc)).toContain('<svg');
+    expect(charts.renderSensitivityTornadoSvg(be)).toContain('<svg');
+    expect(charts.renderCompetitorMatrixSvg()).toContain('<svg');
+    expect(charts.renderAcquisitionFunnelSvg()).toContain('<svg');
+    const slidesMod = await import('../site/data/slides.js');
+    expect(charts.renderRiskMatrixSvg(slidesMod.RISKS_11, 'R1')).toContain('<svg');
   });
 });

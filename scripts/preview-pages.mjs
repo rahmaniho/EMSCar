@@ -15,6 +15,7 @@ const MIME = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
 };
 
 const server = http.createServer((req, res) => {
