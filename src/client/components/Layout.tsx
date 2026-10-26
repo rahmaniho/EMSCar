@@ -166,6 +166,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             >
               پیگیری مأموریت
             </Link>
+            <a
+              href="/showcase/"
+              className="hover:text-amber-400 transition text-emerald-300"
+            >
+              معرفی جامع (Pages)
+            </a>
             <Link
               to="/request/new"
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition shadow-sm"
@@ -319,6 +325,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/legal" className="block py-2 text-slate-200">
               ایمنی جاده‌ای و قوانین لغو
             </Link>
+            <a href="/showcase/" className="block py-2 text-emerald-300 font-semibold">
+              معرفی جامع پروژه (GitHub Pages)
+            </a>
             <Link to="/support" className="block py-2 text-slate-200">
               مرکز پشتیبانی و ثبت شکایات
             </Link>

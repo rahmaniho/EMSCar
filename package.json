@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "NODE_NO_WARNINGS=1 tsx watch src/server/index.ts",
+    "pages:preview": "node scripts/preview-pages.mjs",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "NODE_NO_WARNINGS=1 NODE_ENV=production node dist/server/server/index.js",
     "typecheck": "tsc --noEmit",
