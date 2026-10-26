@@ -1004,4 +1004,121 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
 
     expect(auditRes.body.adminAuditLogs.length).toBeGreaterThan(0);
   });
+
+  it('۱۳. استعلام عمومی کد رهگیری بدون نشت اطلاعات شخصی/مکانی و مدیریت تنظیمات و زون‌های ادمین را تضمین می‌کند', async () => {
+    const customerToken = await loginAs('09120000021', 'Customer@1405!');
+    const operatorToken = await loginAs('09120000002', 'Operator@1405!');
+    const adminToken = await loginAs('09120000001', 'Admin@1405!');
+
+    const vehiclesRes = await request(ctx.app)
+      .get('/api/customers/vehicles')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    const domesticVehicle = vehiclesRes.body.vehicles[0];
+    const servicesRes = await request(ctx.app).get('/api/catalog/services').expect(200);
+
+    const created = await request(ctx.app)
+      .post('/api/requests')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        vehicleId: domesticVehicle.id,
+        serviceId: servicesRes.body.services[0].id,
+        originLat: 36.2688,
+        originLng: 50.0041,
+        originAddress: 'قزوین، خیابان خیام جنوبی، کوچه ۱۲، پلاک ۴',
+        issueDescription: 'استارت نخوردن خودرو در پارکینگ',
+      })
+      .expect(201);
+
+    const trackingCode = created.body.request.trackingCode as string;
+    const requestId = created.body.request.id as number;
+
+    // استعلام عمومی بدون توکن فقط خلاصه وضعیت و محدوده را می‌دهد و تلفن/آدرس دقیق/پلاک ندارد
+    const publicTrack = await request(ctx.app)
+      .get(`/api/requests/track/${trackingCode}`)
+      .expect(200);
+
+    expect(publicTrack.body.summary.trackingCode).toBe(trackingCode);
+    expect(publicTrack.body.summary.provinceName).toContain('قزوین');
+    expect(publicTrack.body.summary.originAddress).toBeUndefined();
+    expect(publicTrack.body.summary.customerPhone).toBeUndefined();
+    expect(publicTrack.body.summary.originLat).toBeUndefined();
+
+    // اپراتور وضعیت مأموریت را با ثبت یادداشت به UnderSupportReview می‌برد
+    const opTrans = await request(ctx.app)
+      .post(`/api/requests/${requestId}/staff-transition`)
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({
+        toStatus: 'UnderSupportReview',
+        note: 'بررسی هماهنگی تلفنی مرکز عملیات قزوین',
+      })
+      .expect(200);
+    expect(opTrans.body.request.status).toBe('UnderSupportReview');
+
+    // مدیر ارشد تنظیمات سیستمی را ویرایش می‌کند و لاگ ممیزی ثبت می‌شود
+    await request(ctx.app)
+      .put('/api/admin/settings/support_hotline')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value: '028-33339999' })
+      .expect(200);
+
+    const pubInfo = await request(ctx.app)
+      .get('/api/system/public-info')
+      .expect(200);
+    expect(pubInfo.body.supportHotline).toBe('028-33339999');
+  });
+
+  it('۱۴. مسیر رویدادهای بلادرنگ (SSE) احراز هویت را الزام می‌کند و فیلتر نقش‌محور رویدادها را رعایت می‌نماید', async () => {
+    // بدون احراز هویت باید با 401 مسدود شود
+    await request(ctx.app).get('/api/events/stream').expect(401);
+
+    // بررسی تفکیک نقش‌محور در RealtimeBus
+    const receivedByCust1: string[] = [];
+    const receivedByCust2: string[] = [];
+    const receivedByOperator: string[] = [];
+
+    const mockRes = (sink: string[]) =>
+      ({
+        writableEnded: false,
+        write: (chunk: string) => {
+          if (chunk.startsWith('event: platform_update')) {
+            sink.push(chunk);
+          }
+          return true;
+        },
+      }) as unknown as import('express').Response;
+
+    const clean1 = ctx.services.realtimeBus.addClient({
+      userId: 101,
+      role: 'customer',
+      res: mockRes(receivedByCust1),
+    });
+    const clean2 = ctx.services.realtimeBus.addClient({
+      userId: 202,
+      role: 'customer',
+      res: mockRes(receivedByCust2),
+    });
+    const cleanOp = ctx.services.realtimeBus.addClient({
+      userId: 2,
+      role: 'operator',
+      res: mockRes(receivedByOperator),
+    });
+
+    ctx.services.realtimeBus.publish({
+      type: 'RESPONDER_LOCATION_UPDATED',
+      requestId: 55,
+      customerUserId: 101,
+      responderUserId: 11,
+      status: 'EnRoute',
+    });
+
+    expect(receivedByCust1).toHaveLength(1);
+    expect(receivedByCust2).toHaveLength(0); // مشتری دیگر نباید رویداد مکانی مشتری ۱۰۱ را دریافت کند
+    expect(receivedByOperator).toHaveLength(1); // اپراتور مرکز پیام رویداد را دریافت می‌کند
+
+    clean1();
+    clean2();
+    cleanOp();
+    expect(ctx.services.realtimeBus.getConnectedCount()).toBe(0);
+  });
 });

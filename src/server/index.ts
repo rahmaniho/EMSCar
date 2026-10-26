@@ -25,7 +25,7 @@ async function bootstrap() {
       server: {
         middlewareMode: true,
         allowedHosts: true,
-        hmr: {
+        ws: {
           server: httpServer,
         },
       },

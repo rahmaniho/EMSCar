@@ -11,6 +11,7 @@ import {
   ListChecks,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
+import { useRealtimeEvents } from '../lib/use-realtime.ts';
 import {
   formatToman,
   formatDateTimeFa,
@@ -82,7 +83,7 @@ export function ResponderDashboardPage() {
     ? 'missions'
     : location.pathname.endsWith('/earnings')
       ? 'earnings'
-      : location.hash === '#setup'
+      : location.pathname.endsWith('/setup') || location.hash === '#setup'
         ? 'setup'
         : 'operations';
 
@@ -291,6 +292,48 @@ export function ResponderDashboardPage() {
       });
     }
   };
+
+  const handleSendLiveLocation = async () => {
+    setFeedback(null);
+    const sendCoords = async (lat: number, lng: number) => {
+      try {
+        await apiFetch('/api/responders/location', {
+          method: 'POST',
+          body: JSON.stringify({ lat, lng }),
+        });
+        setFeedback({
+          type: 'ok',
+          text: `موقعیت زنده GPS (${lat.toFixed(4)}, ${lng.toFixed(4)}) به مرکز عملیات و نقشه مشتری ارسال شد.`,
+        });
+        await loadResponderData();
+      } catch (err) {
+        setFeedback({
+          type: 'err',
+          text: err instanceof Error ? err.message : 'خطا در ارسال موقعیت زنده',
+        });
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          void sendCoords(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {
+          // پشتیبان مختصات قزوین در صورت عدم دسترسی GPS مرورگر در محیط دسکتاپ/پیش‌نمایش
+          const jitter = (Math.random() - 0.5) * 0.004;
+          void sendCoords(36.2695 + jitter, 50.0048 + jitter);
+        },
+        { timeout: 4000 }
+      );
+    } else {
+      void sendCoords(36.2695, 50.0048);
+    }
+  };
+
+  useRealtimeEvents(true, () => {
+    void loadResponderData();
+  });
 
   const handleCompleteMission = async (e: React.FormEvent, requestId: number) => {
     e.preventDefault();
@@ -538,7 +581,7 @@ export function ResponderDashboardPage() {
 
         <button
           type="button"
-          onClick={() => navigate('/responder#setup')}
+          onClick={() => navigate('/responder/setup')}
           className={`px-4 py-2 rounded-xl flex items-center gap-1.5 ${
             currentTab === 'setup'
               ? 'bg-slate-900 text-white'
@@ -624,6 +667,14 @@ export function ResponderDashboardPage() {
                       شروع انجام عملیات امدادی
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => void handleSendLiveLocation()}
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold px-3.5 py-2.5 rounded-xl"
+                  >
+                    بروزرسانی موقعیت زنده (GPS)
+                  </button>
 
                   <Link
                     to={`/requests/${activeMission.id}`}

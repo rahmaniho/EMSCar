@@ -28,6 +28,7 @@ import { PaymentsService } from './modules/payments/payments.service.ts';
 import { SupportService } from './modules/support/support.service.ts';
 import { RatingsService } from './modules/ratings/ratings.service.ts';
 import { AdminService } from './modules/admin/admin.service.ts';
+import { RealtimeBus } from './modules/events/realtime-bus.ts';
 import { createSessionMiddleware } from './middleware/auth.ts';
 import { createRateLimiter } from './middleware/rate-limit.ts';
 import { AppError, createErrorHandler } from './middleware/error-handler.ts';
@@ -43,6 +44,7 @@ import { createPaymentsRouter } from './modules/payments/payments.routes.ts';
 import { createSupportRouter } from './modules/support/support.routes.ts';
 import { createRatingsRouter } from './modules/ratings/ratings.routes.ts';
 import { createAdminRouter } from './modules/admin/admin.routes.ts';
+import { createEventsRouter } from './modules/events/events.routes.ts';
 import { BRAND_IDENTITY } from '../shared/constants.ts';
 
 export interface CreateAppOptions {
@@ -57,6 +59,7 @@ export function createAppContext(options?: CreateAppOptions) {
   runMigrations(db);
 
   const auditService = new AuditService(db, config.ENABLE_SECURITY_AUDIT_LOG);
+  const realtimeBus = new RealtimeBus();
 
   const smsProvider: SmsProvider =
     options?.customSmsProvider ??
@@ -81,7 +84,11 @@ export function createAppContext(options?: CreateAppOptions) {
   const geographyService = new GeographyService({ db, audit: auditService });
   const catalogService = new CatalogService({ db, audit: auditService });
   const customersService = new CustomersService(db);
-  const respondersService = new RespondersService({ db, audit: auditService });
+  const respondersService = new RespondersService({
+    db,
+    audit: auditService,
+    realtimeBus,
+  });
   const pricingService = new PricingService({
     db,
     audit: auditService,
@@ -91,6 +98,7 @@ export function createAppContext(options?: CreateAppOptions) {
   const notificationsService = new NotificationsService({
     db,
     smsProvider,
+    realtimeBus,
   });
   const dispatchService = new DispatchService({
     db,
@@ -176,6 +184,7 @@ export function createAppContext(options?: CreateAppOptions) {
       service: BRAND_IDENTITY.persianName,
       environment: config.APP_ENV,
       database: dbCheck?.ok === 1 ? 'connected' : 'degraded',
+      realtimeClients: realtimeBus.getConnectedCount(),
       integrations: {
         paymentGateway: paymentsService.getGatewayStatus(),
         smsProvider: notificationsService.getProviderInfo(),
@@ -255,6 +264,7 @@ export function createAppContext(options?: CreateAppOptions) {
     '/api/admin',
     createAdminRouter({ adminService, respondersService, auditService })
   );
+  app.use('/api/events', createEventsRouter({ realtimeBus }));
 
   // محافظت از مسیرهای ناشناخته API
   app.use('/api', (_req, _res, next) => {
@@ -272,6 +282,7 @@ export function createAppContext(options?: CreateAppOptions) {
     attachErrorHandler,
     services: {
       auditService,
+      realtimeBus,
       identityService,
       geographyService,
       catalogService,

@@ -1,0 +1,46 @@
+name: CI — Auto Emergency (اورژانس خودرو)
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, Reversible Migrations, Automated Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install clean locked dependencies
+        run: npm ci
+
+      - name: Audit dependency security
+        run: npm audit --audit-level=moderate
+
+      - name: Verify TypeScript (Client + Server + Tests)
+        run: npm run typecheck
+
+      - name: Verify repeatable & reversible DB migrations
+        run: |
+          npm run db:migrate
+          npm run db:rollback
+          npm run db:migrate
+          npm run db:status
+
+      - name: Run automated unit & integration tests
+        run: npm test
+
+      - name: Build production client & server bundles
+        run: npm run build

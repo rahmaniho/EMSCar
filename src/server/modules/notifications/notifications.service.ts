@@ -1,14 +1,21 @@
 import type { AppDatabase } from '../../db/connection.ts';
 import type { SmsProvider } from './sms-provider.ts';
+import type { RealtimeBus } from '../events/realtime-bus.ts';
 import { AppError } from '../../middleware/error-handler.ts';
 
 export class NotificationsService {
   private readonly db: AppDatabase;
   private smsProvider: SmsProvider;
+  private readonly realtimeBus?: RealtimeBus;
 
-  constructor(params: { db: AppDatabase; smsProvider: SmsProvider }) {
+  constructor(params: {
+    db: AppDatabase;
+    smsProvider: SmsProvider;
+    realtimeBus?: RealtimeBus;
+  }) {
     this.db = params.db;
     this.smsProvider = params.smsProvider;
+    this.realtimeBus = params.realtimeBus;
   }
 
   setSmsProviderForTesting(provider: SmsProvider): void {
@@ -59,6 +66,27 @@ export class NotificationsService {
       now,
       now
     );
+
+    if (this.realtimeBus) {
+      const targetUser = this.db.get<{ role: string }>(
+        'SELECT role FROM users WHERE id = ?',
+        params.userId
+      );
+      this.realtimeBus.publish({
+        type:
+          params.eventType === 'MISSION_OFFER'
+            ? 'DISPATCH_OFFERED'
+            : params.eventType === 'PAYMENT_VERIFIED'
+              ? 'PAYMENT_UPDATED'
+              : params.eventType === 'SUPPORT_REPLY'
+                ? 'SUPPORT_TICKET_UPDATED'
+                : 'REQUEST_UPDATED',
+        requestId: params.requestId ?? undefined,
+        customerUserId: targetUser?.role === 'customer' ? params.userId : undefined,
+        responderUserId: targetUser?.role === 'responder' ? params.userId : undefined,
+        status: params.eventType,
+      });
+    }
 
     if (!params.sendSms) return;
 

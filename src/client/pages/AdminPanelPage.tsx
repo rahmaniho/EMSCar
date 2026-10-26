@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ShieldAlert,
   BarChart3,
@@ -13,6 +14,14 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
 import { formatDateTimeFa, formatToman } from '../lib/format.ts';
+import {
+  GEOGRAPHY_STATUSES,
+  GEOGRAPHY_STATUS_LABELS,
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+  type GeographyStatus,
+  type ServiceCategory,
+} from '../../shared/constants.ts';
 
 type AdminTab =
   | 'reports'
@@ -57,10 +66,33 @@ interface ExecutiveDashboardResponse {
   }>;
 }
 
+const SECTION_TO_TAB: Record<string, AdminTab> = {
+  reports: 'reports',
+  responders: 'responders',
+  services: 'services',
+  tariffs: 'tariffs',
+  geography: 'geography',
+  finance: 'finance',
+  users: 'users',
+  settings: 'settings_audit',
+  settings_audit: 'settings_audit',
+};
+
 export function AdminPanelPage() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('reports');
+  const { section } = useParams();
+  const navigate = useNavigate();
+  const resolvedTab: AdminTab =
+    (section && SECTION_TO_TAB[section]) || 'reports';
+  const [activeTab, setActiveTab] = useState<AdminTab>(resolvedTab);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = (section && SECTION_TO_TAB[section]) || 'reports';
+    if (next !== activeTab) {
+      setActiveTab(next);
+    }
+  }, [section]);
 
   const [reports, setReports] = useState<ExecutiveDashboardResponse | null>(null);
   const [responders, setResponders] = useState<Array<Record<string, unknown>>>([]);
@@ -116,6 +148,16 @@ export function AdminPanelPage() {
     percentOff: '10',
     maxDiscountToman: '150000',
   });
+  const [newServiceForm, setNewServiceForm] = useState({
+    slug: '',
+    titleFa: '',
+    category: 'diagnostics_repair' as ServiceCategory,
+    basePriceToman: '450000',
+    perKmDispatchToman: '18000',
+    enrouteCancelFeeToman: '120000',
+    descriptionFa: '',
+  });
+  const [settingDrafts, setSettingDrafts] = useState<Record<string, string>>({});
 
   const clearAlerts = () => {
     setFeedback(null);
@@ -452,6 +494,81 @@ export function AdminPanelPage() {
     }
   };
 
+  const handleCreateService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearAlerts();
+    try {
+      await apiFetch('/api/catalog/admin/services', {
+        method: 'POST',
+        body: JSON.stringify({
+          slug: newServiceForm.slug.trim().toLowerCase(),
+          titleFa: newServiceForm.titleFa.trim(),
+          category: newServiceForm.category,
+          descriptionFa:
+            newServiceForm.descriptionFa.trim() ||
+            `ارائه تخصصی خدمت ${newServiceForm.titleFa.trim()} توسط ناوگان تأییدشده`,
+          termsFa: 'لغو پیش از حرکت امدادگر رایگان و پس از حرکت مشمول هزینه ایاب‌وذهاب مصوب است.',
+          basePriceToman: Number(newServiceForm.basePriceToman),
+          perKmDispatchToman: Number(newServiceForm.perKmDispatchToman),
+          enrouteCancelFeeToman: Number(newServiceForm.enrouteCancelFeeToman),
+        }),
+      });
+      setNewServiceForm({
+        slug: '',
+        titleFa: '',
+        category: 'diagnostics_repair',
+        basePriceToman: '450000',
+        perKmDispatchToman: '18000',
+        enrouteCancelFeeToman: '120000',
+        descriptionFa: '',
+      });
+      setFeedback('خدمت امدادی جدید به کاتالوگ اضافه شد و در لاگ ممیزی ثبت گردید.');
+      await loadTabData('services');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'خطا در ایجاد خدمت جدید');
+    }
+  };
+
+  const handleZoneStatusToggle = async (
+    zoneId: number,
+    nextStatus: GeographyStatus
+  ) => {
+    clearAlerts();
+    try {
+      await apiFetch(`/api/geography/admin/zones/${zoneId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: nextStatus,
+          reason: `تغییر وضعیت زون به ${nextStatus} توسط مدیر ارشد در پنل مدیریت`,
+        }),
+      });
+      setFeedback('وضعیت عملیاتی زون پوشش به‌روزرسانی و ممیزی شد.');
+      await loadTabData('geography');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'خطا در تغییر وضعیت زون');
+    }
+  };
+
+  const handleSaveSetting = async (key: string, rawDraft: string) => {
+    clearAlerts();
+    try {
+      let parsedValue: unknown = rawDraft;
+      try {
+        parsedValue = JSON.parse(rawDraft);
+      } catch {
+        parsedValue = rawDraft;
+      }
+      await apiFetch(`/api/admin/settings/${encodeURIComponent(key)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value: parsedValue }),
+      });
+      setFeedback(`تنظیم سیستمی «${key}» ذخیره و در لاگ ممیزی ثبت شد.`);
+      await loadTabData('settings_audit');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'خطا در ذخیره تنظیمات');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <div className="bg-slate-900 text-white rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4">
@@ -503,7 +620,11 @@ export function AdminPanelPage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id as AdminTab)}
+              onClick={() => {
+                setActiveTab(tab.id as AdminTab);
+                const slug = tab.id === 'settings_audit' ? 'settings' : tab.id;
+                navigate(slug === 'reports' ? '/admin' : `/admin/${slug}`);
+              }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
                 activeTab === tab.id
                   ? 'bg-slate-900 text-amber-400 shadow-sm'
@@ -677,6 +798,85 @@ export function AdminPanelPage() {
       {/* ۳. مدیریت کاتالوگ خدمات */}
       {activeTab === 'services' && (
         <div className="space-y-4 text-xs">
+          <form
+            onSubmit={handleCreateService}
+            className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3"
+          >
+            <h3 className="font-extrabold text-sm text-slate-900">
+              افزودن خدمت جدید به کاتالوگ امداد خودرو
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              <input
+                type="text"
+                required
+                placeholder="شناسه لاتین (slug)"
+                value={newServiceForm.slug}
+                onChange={(e) =>
+                  setNewServiceForm({ ...newServiceForm, slug: e.target.value })
+                }
+                className="rounded-xl border border-slate-300 px-3 py-2 font-mono"
+              />
+              <input
+                type="text"
+                required
+                placeholder="عنوان فارسی خدمت"
+                value={newServiceForm.titleFa}
+                onChange={(e) =>
+                  setNewServiceForm({ ...newServiceForm, titleFa: e.target.value })
+                }
+                className="rounded-xl border border-slate-300 px-3 py-2"
+              />
+              <select
+                value={newServiceForm.category}
+                onChange={(e) =>
+                  setNewServiceForm({
+                    ...newServiceForm,
+                    category: e.target.value as ServiceCategory,
+                  })
+                }
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+              >
+                {SERVICE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {SERVICE_CATEGORY_LABELS[cat]}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                required
+                placeholder="نرخ پایه (تومان)"
+                value={newServiceForm.basePriceToman}
+                onChange={(e) =>
+                  setNewServiceForm({
+                    ...newServiceForm,
+                    basePriceToman: e.target.value,
+                  })
+                }
+                className="rounded-xl border border-slate-300 px-3 py-2 font-mono"
+              />
+              <input
+                type="number"
+                required
+                placeholder="هر کیلومتر اعزام (تومان)"
+                value={newServiceForm.perKmDispatchToman}
+                onChange={(e) =>
+                  setNewServiceForm({
+                    ...newServiceForm,
+                    perKmDispatchToman: e.target.value,
+                  })
+                }
+                className="rounded-xl border border-slate-300 px-3 py-2 font-mono"
+              />
+              <button
+                type="submit"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl"
+              >
+                ایجاد خدمت جدید
+              </button>
+            </div>
+          </form>
+
           <div className="space-y-3">
             {services.map((s) => {
               const id = Number(s.id);
@@ -953,15 +1153,11 @@ export function AdminPanelPage() {
                       }
                       className="rounded-xl border border-slate-300 bg-white px-3 py-2 font-bold"
                     >
-                      <option value="active">فعال عملیاتی (active)</option>
-                      <option value="preparing">در حال آماده‌سازی (preparing)</option>
-                      <option value="pending_approval">
-                        در انتظار تأیید (pending_approval)
-                      </option>
-                      <option value="temporarily_suspended">
-                        تعلیق موقت (temporarily_suspended)
-                      </option>
-                      <option value="inactive">غیرفعال (inactive)</option>
+                      {GEOGRAPHY_STATUSES.map((st) => (
+                        <option key={st} value={st}>
+                          {GEOGRAPHY_STATUS_LABELS[st]} ({st})
+                        </option>
+                      ))}
                     </select>
                     <input
                       type="text"
@@ -983,6 +1179,57 @@ export function AdminPanelPage() {
                       ثبت مصوبه وضعیت استان
                     </button>
                   </div>
+
+                  {Array.isArray(p.zones) && p.zones.length > 0 && (
+                    <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                      <div className="font-bold text-slate-700">
+                        زون‌های خدماتی تعریف‌شده در این استان:
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {(p.zones as Array<Record<string, unknown>>).map((z) => {
+                          const zid = Number(z.zoneId);
+                          const isZoneActive = z.status === 'active';
+                          return (
+                            <div
+                              key={zid}
+                              className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                            >
+                              <div>
+                                <div className="font-bold text-slate-900">
+                                  {String(z.nameFa)}{' '}
+                                  <span className="font-mono text-[11px] text-slate-500">
+                                    ({String(z.code)})
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500">
+                                  آمادگی ناوگان: {String(z.approvedResponders)}/
+                                  {String(z.targetCapacity)} ({String(z.readinessPercent)}%)
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleZoneStatusToggle(
+                                    zid,
+                                    isZoneActive ? 'inactive' : 'active'
+                                  )
+                                }
+                                className={`px-2.5 py-1 rounded-lg font-bold ${
+                                  isZoneActive
+                                    ? 'bg-emerald-100 text-emerald-900'
+                                    : 'bg-amber-100 text-amber-900'
+                                }`}
+                              >
+                                {isZoneActive
+                                  ? 'فعال (غیرفعال‌سازی)'
+                                  : `${String(z.statusLabel)} (فعال‌سازی)`}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1329,24 +1576,51 @@ export function AdminPanelPage() {
               <h3 className="font-extrabold text-sm text-slate-900">
                 تنظیمات عملیاتی سامانه
               </h3>
-              {settings.map((s) => (
-                <div
-                  key={String(s.key)}
-                  className="py-2 border-b border-slate-100 last:border-0 flex items-center justify-between gap-2"
-                >
-                  <div>
-                    <div className="font-bold text-slate-800">
-                      {String(s.descriptionFa)}
+              {settings.map((s) => {
+                const key = String(s.key);
+                const defaultText =
+                  typeof s.value === 'string'
+                    ? s.value
+                    : JSON.stringify(s.value);
+                const draftVal =
+                  settingDrafts[key] !== undefined ? settingDrafts[key] : defaultText;
+                return (
+                  <div
+                    key={key}
+                    className="py-2.5 border-b border-slate-100 last:border-0 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-800">
+                        {String(s.descriptionFa)}
+                      </span>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        {key}
+                      </span>
                     </div>
-                    <div className="font-mono text-[11px] text-slate-400">
-                      {String(s.key)}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        dir="ltr"
+                        value={draftVal}
+                        onChange={(e) =>
+                          setSettingDrafts({
+                            ...settingDrafts,
+                            [key]: e.target.value,
+                          })
+                        }
+                        className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveSetting(key, draftVal)}
+                        className="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold px-3 py-1.5 rounded-lg transition"
+                      >
+                        ذخیره
+                      </button>
                     </div>
                   </div>
-                  <span className="font-mono font-bold bg-slate-100 px-2.5 py-1 rounded">
-                    {JSON.stringify(s.value)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2.5">
