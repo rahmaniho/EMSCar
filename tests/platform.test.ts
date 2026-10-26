@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -12,7 +12,11 @@ import {
   tomanToRial,
   rialToToman,
 } from '../src/shared/pricing-formula.ts';
-import type { SmsProvider } from '../src/server/modules/notifications/sms-provider.ts';
+import {
+  KavenegarSmsProvider,
+  SandboxOutboxSmsProvider,
+  type SmsProvider,
+} from '../src/server/modules/notifications/sms-provider.ts';
 
 describe('سامانه جامع اورژانس خودرو — مجموعه تست‌های خودکار مهندسی، امنیتی و مالی', () => {
   let tmpDir: string;
@@ -28,6 +32,9 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
         DATABASE_BACKUP_DIR: path.join(tmpDir, 'backups'),
         RATE_LIMIT_MAX_REQUESTS: '500',
         AUTH_RATE_LIMIT_MAX_REQUESTS: '100',
+        // قابلیت‌های ویژه در آزمون یکپارچه صریحاً فعال می‌شوند؛ Production پیش‌فرض آن‌ها خاموش است.
+        FEATURE_ALLOW_EV_SERVICES: 'true',
+        FEATURE_ALLOW_POSTPAY_DEBT: 'true',
       },
     });
     ctx.attachErrorHandler();
@@ -309,7 +316,7 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     );
   });
 
-  it('۶. چرخه کامل مأموریت، ماشین وضعیت، گزارش پایان خدمت، پرداخت ایمن، ضدتکرار Callback، بازپرداخت و تسویه امدادگر را اجرا می‌کند', async () => {
+  it('۶. چرخه مأموریت و پرداخت Sandbox را اجرا می‌کند، بازپرداخت را fail-closed می‌سنجد و دادهٔ آزمایشی را از گزارش واقعی جدا می‌کند', async () => {
     const customerToken = await loginAs('09120000021', 'Customer@1405!');
     const evResponderToken = await loginAs('09120000013', 'Responder@1405!');
     const adminToken = await loginAs('09120000001', 'Admin@1405!');
@@ -392,6 +399,9 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       true
     );
 
+    // خاموش‌کردن عرضهٔ EV نباید مأموریتی را که قبلاً ساخته شده متوقف کند.
+    ctx.db.run("UPDATE system_settings SET value_json = 'false' WHERE key = 'allow_ev_services'");
+
     // پذیرش مأموریت توسط متخصص EV
     await request(ctx.app)
       .post(`/api/requests/${reqId}/accept`)
@@ -446,7 +456,77 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       .set('Authorization', `Bearer ${customerToken}`)
       .expect(200);
 
-    // ایجاد سفارش پرداخت
+    // بدهی پس‌پرداخت با هر دو پرچم فعال ثبت می‌شود، اما هرگز به‌عنوان وجه دریافتی گزارش نمی‌شود.
+    const debtSetting = ctx.db.get<{ value_json: string }>(
+      "SELECT value_json FROM system_settings WHERE key = 'allow_postpay_debt'"
+    );
+    expect(debtSetting?.value_json).toBe('false');
+    const operatorToken = await loginAs('09120000002', 'Operator@1405!');
+    ctx.db.run(
+      "UPDATE system_settings SET value_json = 'true' WHERE key = 'allow_postpay_debt'"
+    );
+    const debtCapability = await request(ctx.app)
+      .get('/api/payments/staff/capabilities')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .expect(200);
+    expect(debtCapability.body.postpayDebtEnabled).toBe(true);
+
+    // سفارش پرداخت باز باید جلوی ثبت بدهی را بگیرد تا Callback دیررس، دو وضعیت مالی نسازد.
+    const preDebtOrder = await request(ctx.app)
+      .post('/api/payments/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ requestId: reqId })
+      .expect(201);
+    const pendingDebtAttempt = await request(ctx.app)
+      .post('/api/payments/staff/approve-debt')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ requestId: reqId, reason: 'تأیید مهلت پرداخت طبق رویه آزمون' })
+      .expect(409);
+    expect(pendingDebtAttempt.body.error.code).toBe('PAYMENT_ATTEMPT_IN_PROGRESS');
+    await request(ctx.app)
+      .post('/api/payments/sandbox/simulate')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ authority: preDebtOrder.body.order.authority, outcome: 'fail' })
+      .expect(200);
+    const failedBeforeDebt = await request(ctx.app)
+      .post('/api/payments/callback/verify')
+      .send({ authority: preDebtOrder.body.order.authority })
+      .expect(200);
+    expect(failedBeforeDebt.body.result.paid).toBe(false);
+
+    const debtRes = await request(ctx.app)
+      .post('/api/payments/staff/approve-debt')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ requestId: reqId, reason: 'تأیید مهلت پرداخت طبق رویه آزمون' })
+      .expect(200);
+    expect(debtRes.body.paymentStatus).toBe('approved_debt');
+    expect(debtRes.body.paymentReceived).toBe(false);
+    expect(debtRes.body.amountToman).toBeGreaterThan(0);
+    expect(
+      ctx.db.get<{ payment_status: string }>(
+        'SELECT payment_status FROM service_requests WHERE id = ?',
+        reqId
+      )?.payment_status
+    ).toBe('approved_debt');
+    expect(
+      ctx.db.get<{ status: string }>(
+        'SELECT status FROM invoices WHERE request_id = ?',
+        reqId
+      )?.status
+    ).toBe('approved_debt');
+    expect(
+      ctx.db.get<{ cnt: number }>(
+        `SELECT COUNT(*) AS cnt FROM payment_intents WHERE request_id = ? AND status = 'verified'`,
+        reqId
+      )?.cnt
+    ).toBe(0);
+    await request(ctx.app)
+      .post('/api/payments/staff/approve-debt')
+      .set('Authorization', `Bearer ${operatorToken}`)
+      .send({ requestId: reqId, reason: 'تلاش تکراری برای ثبت بدهی' })
+      .expect(409);
+
+    // ایجاد سفارش پرداخت واقعی/آزمایشی (برچسب Sandbox در آزمون حفظ می‌شود)
     const orderRes = await request(ctx.app)
       .post('/api/payments/orders')
       .set('Authorization', `Bearer ${customerToken}`)
@@ -482,6 +562,43 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       .expect(200);
     expect(verify1.body.result.paid).toBe(true);
     expect(verify1.body.result.alreadyProcessed).toBe(false);
+    expect(verify1.body.result.isSandbox).toBe(true);
+    const sandboxRequestDetail = await request(ctx.app)
+      .get(`/api/requests/${reqId}`)
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    expect(sandboxRequestDetail.body.request.paymentIsSandbox).toBe(true);
+    expect(sandboxRequestDetail.body.request.paymentStatusLabel).toContain('Sandbox');
+    const customerRequestList = await request(ctx.app)
+      .get('/api/requests/my')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    expect(
+      customerRequestList.body.requests.find((item: { id: number }) => item.id === reqId)
+        ?.paymentStatusLabel
+    ).toContain('Sandbox');
+    const customerPaymentHistory = await request(ctx.app)
+      .get('/api/payments/customer/history')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    const sandboxInvoice = customerPaymentHistory.body.invoices.find(
+      (item: { request_id: number }) => item.request_id === reqId
+    );
+    expect(sandboxInvoice.payment_is_sandbox).toBe(1);
+    expect(
+      ctx.db.get<{ cnt: number }>(
+        `SELECT COUNT(*) AS cnt FROM notifications
+         WHERE request_id = ? AND event_type = 'PAYMENT_SANDBOX_VERIFIED' AND channel = 'sms'`,
+        reqId
+      )?.cnt
+    ).toBe(0);
+    expect(
+      ctx.db.get<{ title: string }>(
+        `SELECT title FROM notifications
+         WHERE request_id = ? AND event_type = 'PAYMENT_SANDBOX_VERIFIED' AND channel = 'in_app'`,
+        reqId
+      )?.title
+    ).toContain('شبیه‌سازی‌شده');
 
     const walletAfter1 = await request(ctx.app)
       .get('/api/payments/responder/wallet')
@@ -489,6 +606,7 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       .expect(200);
     const initialCreditedBalance = walletAfter1.body.balanceToman as number;
     expect(initialCreditedBalance).toBeGreaterThan(0);
+    expect(walletAfter1.body.eligibleForSettlementToman).toBe(initialCreditedBalance);
 
     // ارسال دوباره همان Callback (تست Idempotency) نباید موجودی امدادگر را دوبرابر کند!
     const verify2 = await request(ctx.app)
@@ -522,40 +640,112 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       .send({ requestId: reqId, rating: 4 })
       .expect(409);
 
-    // درخواست تسویه بخشی از درآمد توسط امدادگر و تأیید توسط مدیر کل
+    // درخواست تسویه در Sandbox فقط شبیه‌سازی می‌شود و مرجع بانکی ساختگی تولید/ثبت نمی‌شود.
     const settlementRes = await request(ctx.app)
       .post('/api/payments/responder/settlements')
       .set('Authorization', `Bearer ${evResponderToken}`)
       .send({ amountToman: 100000 })
       .expect(201);
+    expect(settlementRes.body.result.simulationOnly).toBe(true);
+    expect(settlementRes.body.result.executionMode).toBe('sandbox_simulated');
 
-    await request(ctx.app)
+    const settlementProcess = await request(ctx.app)
       .post(`/api/payments/admin/settlements/${settlementRes.body.result.settlementId}/process`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({
-        decision: 'approved_paid',
-        bankReferenceCode: 'PAYA-140508049981',
-        note: 'واریز از طریق چرخه اول پایا انجام شد',
-      })
+      .send({ decision: 'approved_paid' })
       .expect(200);
+    expect(settlementProcess.body.result.simulationOnly).toBe(true);
+    expect(settlementProcess.body.result.payoutExecutedByPlatform).toBe(false);
+    expect(settlementProcess.body.result.bankTransferVerifiedByProvider).toBe(false);
+    expect(
+      ctx.db.get<{ bank_reference_code: string | null; execution_mode: string }>(
+        'SELECT bank_reference_code, execution_mode FROM settlements WHERE id = ?',
+        settlementRes.body.result.settlementId
+      )
+    ).toEqual({ bank_reference_code: null, execution_mode: 'sandbox_simulated' });
 
-    // بازپرداخت جزئی به مشتری توسط مدیر کل و بررسی گزارش تطبیق مالی
-    await request(ctx.app)
+    // بازپرداخت بدون provider واقعی باید fail-closed باشد و هیچ دادهٔ مالی را تغییر ندهد.
+    const paymentStatusBeforeRefund = ctx.db.get<{ payment_status: string }>(
+      'SELECT payment_status FROM service_requests WHERE id = ?',
+      reqId
+    )?.payment_status;
+    const invoiceStatusBeforeRefund = ctx.db.get<{ status: string }>(
+      'SELECT status FROM invoices WHERE request_id = ?',
+      reqId
+    )?.status;
+    const responderProfile = ctx.db.get<{ id: number }>(
+      'SELECT id FROM responder_profiles WHERE user_id = (SELECT id FROM users WHERE phone = ?)',
+      '09120000013'
+    );
+    const walletBeforeRefund = ctx.db.get<{ balance_after_toman: number }>(
+      'SELECT balance_after_toman FROM wallet_ledger_entries WHERE responder_id = ? ORDER BY id DESC LIMIT 1',
+      responderProfile!.id
+    )?.balance_after_toman;
+    const refundDenied = await request(ctx.app)
       .post('/api/payments/admin/refunds')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         requestId: reqId,
         amountToman: 50000,
-        reason: 'تخفیف رضایت‌مندی مدیریت پس از بررسی فاکتور قطعه',
+        reason: 'درخواست بازپرداخت برای آزمون fail closed',
       })
-      .expect(201);
+      .expect(503);
+    expect(refundDenied.body.error.code).toBe('REFUND_PROVIDER_UNAVAILABLE');
+    expect(
+      ctx.db.get<{ payment_status: string }>(
+        'SELECT payment_status FROM service_requests WHERE id = ?',
+        reqId
+      )?.payment_status
+    ).toBe(paymentStatusBeforeRefund);
+    expect(
+      ctx.db.get<{ status: string }>(
+        'SELECT status FROM invoices WHERE request_id = ?',
+        reqId
+      )?.status
+    ).toBe(invoiceStatusBeforeRefund);
+    expect(
+      ctx.db.get<{ balance_after_toman: number }>(
+        'SELECT balance_after_toman FROM wallet_ledger_entries WHERE responder_id = ? ORDER BY id DESC LIMIT 1',
+        responderProfile!.id
+      )?.balance_after_toman
+    ).toBe(walletBeforeRefund);
+    expect(ctx.db.get<{ cnt: number }>('SELECT COUNT(*) AS cnt FROM refunds')?.cnt).toBe(0);
+
+    // رکورد قدیمی بدون مدرک provider پس از migration در طبقه legacy می‌ماند و از جمع واقعی حذف می‌شود.
+    const verifiedIntent = ctx.db.get<{ id: number }>(
+      "SELECT id FROM payment_intents WHERE request_id = ? AND status = 'verified' ORDER BY id DESC LIMIT 1",
+      reqId
+    );
+    const adminUser = ctx.db.get<{ id: number }>(
+      'SELECT id FROM users WHERE phone = ?',
+      '09120000001'
+    );
+    ctx.db.run(
+      `INSERT INTO refunds (
+        payment_intent_id, request_id, amount_toman, reason, approved_by_admin_id, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, 'completed', ?)`,
+      verifiedIntent!.id,
+      reqId,
+      50000,
+      'رکورد تاریخی فاقد مدرک provider',
+      adminUser!.id,
+      new Date().toISOString()
+    );
 
     const reconRes = await request(ctx.app)
       .get('/api/payments/admin/reconciliation')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    expect(reconRes.body.report.summary.totalRefundedToman).toBe(50000);
-    expect(reconRes.body.report.summary.settlementsPaidToman).toBe(100000);
+    expect(reconRes.body.report.gateway.connectionVerified).toBe(false);
+    expect(reconRes.body.report.summary.grossVerifiedToman).toBe(0);
+    expect(reconRes.body.report.summary.totalRefundedToman).toBe(0);
+    expect(reconRes.body.report.summary.netCollectedToman).toBe(0);
+    expect(reconRes.body.report.summary.settlementsPaidToman).toBe(0);
+    expect(reconRes.body.report.sandbox.grossPaymentsToman).toBeGreaterThan(0);
+    expect(reconRes.body.report.sandbox.verifiedPaymentsCount).toBe(1);
+    expect(reconRes.body.report.sandbox.settlementsPaidToman).toBe(100000);
+    expect(reconRes.body.report.excludedUnverified.legacyRefundsToman).toBe(50000);
+    expect(reconRes.body.report.excludedUnverified.legacyRefundsCount).toBe(1);
   });
 
   it('۷. ثبت تیکت شکایت، محرمانگی یادداشت داخلی اپراتور و ارجاع پرونده به UnderSupportReview را تضمین می‌کند', async () => {
@@ -692,7 +882,7 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
         return {
           status: 'sandbox_logged',
           providerName: 'recovered_provider',
-          providerMessageId: 'recovered_001',
+          providerMessageId: null,
         };
       },
     });
@@ -700,8 +890,47 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     const retryRes = await request(ctx.app)
       .post(`/api/notifications/admin/${failedSms.id}/retry`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    expect(retryRes.body.result.ok).toBe(true);
+      .expect(202);
+    expect(retryRes.body.ok).toBe(true);
+    expect(retryRes.body.result.ok).toBe(false);
+    expect(retryRes.body.result.acceptedByProvider).toBe(false);
+    expect(retryRes.body.result.simulationOnly).toBe(true);
+    expect(
+      ctx.db.get<{ delivery_status: string; provider_message_id: string | null }>(
+        'SELECT delivery_status, provider_message_id FROM notifications WHERE id = ?',
+        failedSms.id
+      )
+    ).toEqual({ delivery_status: 'sandbox_logged', provider_message_id: null });
+
+    // پذیرش provider واقعی با شناسه باید از Sandbox متمایز بماند و فقط «پذیرش» ثبت کند.
+    ctx.services.notificationsService.setSmsProviderForTesting({
+      name: 'test_live_sms_provider',
+      isSandbox: false,
+      async sendSms() {
+        return {
+          status: 'provider_accepted',
+          providerName: 'test_live_sms_provider',
+          providerMessageId: '123456789',
+        };
+      },
+    });
+    const adminUser = ctx.db.get<{ id: number }>(
+      'SELECT id FROM users WHERE phone = ?',
+      '09120000001'
+    );
+    await ctx.services.notificationsService.notifyUser({
+      userId: adminUser!.id,
+      eventType: 'SMS_PROVIDER_ACCEPTANCE_TEST',
+      title: 'آزمون پذیرش provider',
+      body: 'این آزمون تحویل به گوشی را اثبات نمی‌کند.',
+      sendSms: true,
+      dedupBaseKey: 'sms-provider-acceptance-test',
+    });
+    expect(
+      ctx.db.get<{ delivery_status: string; provider_message_id: string | null }>(
+        "SELECT delivery_status, provider_message_id FROM notifications WHERE dedup_key = 'sms:sms-provider-acceptance-test'"
+      )
+    ).toEqual({ delivery_status: 'sent', provider_message_id: '123456789' });
 
     // تست پشتیبان‌گیری آنلاین با بررسی سلامت فایل پشتیبان
     const backup = createDatabaseBackup(ctx.db, ctx.config.resolvedBackupDir);
@@ -715,14 +944,34 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
         DATABASE_PATH: path.join(tmpDir, 'mig-rollback.db'),
       },
     });
+    expect(
+      migTestCtx.db.get<{ value_json: string }>(
+        "SELECT value_json FROM system_settings WHERE key = 'allow_postpay_debt'"
+      )?.value_json
+    ).toBe('false');
     const rolled1 = rollbackLastMigration(migTestCtx.db);
-    expect(rolled1).toBe('003_disable_unverified_launch_defaults.down.sql');
+    expect(rolled1).toBe('005_mark_unverified_financial_records.down.sql');
+    expect(
+      migTestCtx.db.all<{ name: string }>('PRAGMA table_info(refunds)').map((row) => row.name)
+    ).not.toContain('verification_mode');
+    expect(
+      migTestCtx.db.all<{ name: string }>('PRAGMA table_info(settlements)').map((row) => row.name)
+    ).not.toContain('execution_mode');
     const rolled2 = rollbackLastMigration(migTestCtx.db);
-    expect(rolled2).toBe('002_reference_catalog_qazvin.down.sql');
+    expect(rolled2).toBe('004_disable_unverified_postpay_debt.down.sql');
+    expect(
+      migTestCtx.db.get<{ value_json: string }>(
+        "SELECT value_json FROM system_settings WHERE key = 'allow_postpay_debt'"
+      )?.value_json
+    ).toBe('true');
     const rolled3 = rollbackLastMigration(migTestCtx.db);
-    expect(rolled3).toBe('001_initial_schema.down.sql');
+    expect(rolled3).toBe('003_disable_unverified_launch_defaults.down.sql');
+    const rolled4 = rollbackLastMigration(migTestCtx.db);
+    expect(rolled4).toBe('002_reference_catalog_qazvin.down.sql');
+    const rolled5 = rollbackLastMigration(migTestCtx.db);
+    expect(rolled5).toBe('001_initial_schema.down.sql');
     const reapplied = runMigrations(migTestCtx.db);
-    expect(reapplied.length).toBe(3);
+    expect(reapplied.length).toBe(5);
     migTestCtx.db.close();
   });
 
@@ -1290,6 +1539,8 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       expect(productionCtx.config.isProduction).toBe(true);
       expect(productionCtx.config.APP_ENV).toBe('production');
       expect(productionCtx.config.FEATURE_ENABLE_DEV_SEED).toBe(false);
+      expect(productionCtx.config.FEATURE_ALLOW_EV_SERVICES).toBe(false);
+      expect(productionCtx.config.FEATURE_ALLOW_POSTPAY_DEBT).toBe(false);
       expect(
         productionCtx.db.get<{ count: number }>('SELECT COUNT(*) AS count FROM users')?.count
       ).toBe(0);
@@ -1312,6 +1563,14 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       expect(publicInfo.body.devQuickLoginEnabled).toBe(false);
       expect(publicInfo.body.publicOperationsEnabled).toBe(false);
       expect(publicInfo.body.supportHotline).toBeNull();
+      const productionCatalog = await request(productionCtx.app)
+        .get('/api/catalog/services')
+        .expect(200);
+      expect(
+        productionCatalog.body.services.some(
+          (service: { slug: string }) => service.slug === 'ev-specialized-service'
+        )
+      ).toBe(false);
 
       const blocked = await request(productionCtx.app)
         .post('/api/requests')
@@ -1336,5 +1595,335 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     ).toThrow(/Production/);
   });
 
+  it('۱۹. پرچم‌های محیطی خدمات EV و بدهی را سمت سرور اعمال می‌کند و تنظیم غیر بولی را رد می‌کند', async () => {
+    const featuresOffCtx = createAppContext({
+      configOverrides: {
+        APP_ENV: 'test',
+        DATABASE_PATH: path.join(tmpDir, 'features-off.db'),
+        DATABASE_BACKUP_DIR: path.join(tmpDir, 'features-off-backups'),
+        PRIVATE_STORAGE_DIR: path.join(tmpDir, 'features-off-private'),
+        FEATURE_ALLOW_EV_SERVICES: 'false',
+        FEATURE_ALLOW_POSTPAY_DEBT: 'false',
+        RATE_LIMIT_MAX_REQUESTS: '500',
+        AUTH_RATE_LIMIT_MAX_REQUESTS: '100',
+      },
+    });
+    featuresOffCtx.attachErrorHandler();
+    seedDevelopmentData(featuresOffCtx.db, { isProduction: false });
+
+    try {
+      // حتی اگر دیتابیس قدیمی یا تنظیم مدیر مقدار true داشته باشد، قفل محیطی برنده است.
+      featuresOffCtx.db.run(
+        "UPDATE system_settings SET value_json = 'true' WHERE key IN ('allow_ev_services', 'allow_postpay_debt')"
+      );
+      const adminLogin = await request(featuresOffCtx.app)
+        .post('/api/auth/login')
+        .send({ phone: '09120000001', password: 'Admin@1405!' })
+        .expect(200);
+      const operatorLogin = await request(featuresOffCtx.app)
+        .post('/api/auth/login')
+        .send({ phone: '09120000002', password: 'Operator@1405!' })
+        .expect(200);
+      const adminToken = adminLogin.body.token as string;
+      const operatorToken = operatorLogin.body.token as string;
+      const debtCapability = await request(featuresOffCtx.app)
+        .get('/api/payments/staff/capabilities')
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .expect(200);
+      expect(debtCapability.body.postpayDebtEnabled).toBe(false);
+
+      const catalog = await request(featuresOffCtx.app).get('/api/catalog/services').expect(200);
+      expect(
+        catalog.body.services.some((service: { slug: string }) => service.slug === 'ev-specialized-service')
+      ).toBe(false);
+      const evService = featuresOffCtx.db.get<{ id: number }>(
+        "SELECT id FROM service_catalog WHERE slug = 'ev-specialized-service'"
+      );
+      const blockedQuote = await request(featuresOffCtx.app)
+        .post('/api/pricing/quote')
+        .send({
+          serviceId: evService!.id,
+          originLat: 36.298,
+          originLng: 50.015,
+          vehicleCategory: 'electric',
+        })
+        .expect(503);
+      expect(blockedQuote.body.error.code).toBe('EV_SERVICES_DISABLED');
+      const customerLogin = await request(featuresOffCtx.app)
+        .post('/api/auth/login')
+        .send({ phone: '09120000021', password: 'Customer@1405!' })
+        .expect(200);
+      const customerToken = customerLogin.body.token as string;
+      const customerVehicles = await request(featuresOffCtx.app)
+        .get('/api/customers/vehicles')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(200);
+      const electricVehicle = customerVehicles.body.vehicles.find(
+        (vehicle: { category: string }) => vehicle.category === 'electric'
+      );
+      const blockedEvRequest = await request(featuresOffCtx.app)
+        .post('/api/requests')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          vehicleId: electricVehicle.id,
+          serviceId: evService!.id,
+          originLat: 36.298,
+          originLng: 50.015,
+          originAddress: 'قزوین، محدودهٔ پونک',
+          issueDescription: 'تست قفل ثبت درخواست برای خدمت EV',
+        })
+        .expect(503);
+      expect(blockedEvRequest.body.error.code).toBe('EV_SERVICES_DISABLED');
+
+      const settings = await request(featuresOffCtx.app)
+        .get('/api/admin/settings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      for (const key of ['allow_ev_services', 'allow_postpay_debt']) {
+        const setting = settings.body.settings.find((row: { key: string }) => row.key === key);
+        expect(setting.environmentLocked).toBe(true);
+        expect(setting.effectiveValue).toBe(false);
+      }
+
+      const enabledEv = await request(featuresOffCtx.app)
+        .put('/api/admin/settings/allow_ev_services')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ value: true })
+        .expect(403);
+      expect(enabledEv.body.error.code).toBe('FEATURE_DISABLED_BY_ENVIRONMENT');
+      const malformedFlag = await request(featuresOffCtx.app)
+        .put('/api/admin/settings/allow_ev_services')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ value: 'false' })
+        .expect(400);
+      expect(malformedFlag.body.error.code).toBe('INVALID_SETTING_VALUE');
+      await request(featuresOffCtx.app)
+        .put('/api/admin/settings/allow_postpay_debt')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ value: true })
+        .expect(403);
+      const blockedDebt = await request(featuresOffCtx.app)
+        .post('/api/payments/staff/approve-debt')
+        .set('Authorization', `Bearer ${operatorToken}`)
+        .send({ requestId: 999999, reason: 'تست قفل محیطی بدهی' })
+        .expect(403);
+      expect(blockedDebt.body.error.code).toBe('POSTPAY_DEBT_DISABLED');
+    } finally {
+      featuresOffCtx.db.close();
+    }
+  });
+
+  it('۲۰. تسویهٔ زنده فقط با مرجع واقعی و تأیید صریح مدیر ثبت می‌شود و انتقال خودکار/استعلام بانکی ادعا نمی‌شود', async () => {
+    const liveCtx = createAppContext({
+      configOverrides: {
+        APP_ENV: 'test',
+        DATABASE_PATH: path.join(tmpDir, 'manual-settlement.db'),
+        PRIVATE_STORAGE_DIR: path.join(tmpDir, 'manual-settlement-private'),
+        DATABASE_BACKUP_DIR: path.join(tmpDir, 'manual-settlement-backups'),
+        RATE_LIMIT_MAX_REQUESTS: '500',
+        AUTH_RATE_LIMIT_MAX_REQUESTS: '100',
+      },
+      customPaymentGateway: {
+        name: 'test_live_gateway',
+        isSandbox: false,
+        async createOrder() {
+          return {
+            authority: 'TEST-AUTH-0001',
+            paymentRedirectUrl: 'https://example.invalid/pay',
+            isSandbox: false,
+          };
+        },
+        async verifyOrder() {
+          return { verified: false, errorCode: 'TEST_ONLY', errorMessage: 'test provider' };
+        },
+      },
+    });
+    liveCtx.attachErrorHandler();
+    seedDevelopmentData(liveCtx.db, { isProduction: false });
+
+    try {
+      const adminLogin = await request(liveCtx.app)
+        .post('/api/auth/login')
+        .send({ phone: '09120000001', password: 'Admin@1405!' })
+        .expect(200);
+      const adminToken = adminLogin.body.token as string;
+      const responderLogin = await request(liveCtx.app)
+        .post('/api/auth/login')
+        .send({ phone: '09120000011', password: 'Responder@1405!' })
+        .expect(200);
+      const responderToken = responderLogin.body.token as string;
+      const responder = liveCtx.db.get<{ id: number }>(
+        'SELECT rp.id FROM responder_profiles rp JOIN users u ON u.id = rp.user_id WHERE u.phone = ?',
+        '09120000011'
+      );
+      const now = new Date().toISOString();
+      liveCtx.db.run(
+        'UPDATE responder_profiles SET sheba_number = ? WHERE id = ?',
+        'IR123456789012345678901234',
+        responder!.id
+      );
+      liveCtx.db.run(
+        `INSERT INTO wallet_ledger_entries (
+          responder_id, entry_type, amount_toman, balance_after_toman, description, created_at
+        ) VALUES (?, 'manual_adjustment', 125000, 125000, ?, ?)`,
+        responder!.id,
+        'تراز قدیمی فاقد سند پرداخت واقعی برای آزمون fail-closed',
+        now
+      );
+      const unverifiedWallet = await request(liveCtx.app)
+        .get('/api/payments/responder/wallet')
+        .set('Authorization', `Bearer ${responderToken}`)
+        .expect(200);
+      expect(unverifiedWallet.body.balanceToman).toBe(125000);
+      expect(unverifiedWallet.body.eligibleForSettlementToman).toBe(0);
+      const blockedUnverifiedPayout = await request(liveCtx.app)
+        .post('/api/payments/responder/settlements')
+        .set('Authorization', `Bearer ${responderToken}`)
+        .send({ amountToman: 50000 })
+        .expect(422);
+      expect(blockedUnverifiedPayout.body.error.code).toBe('INSUFFICIENT_VERIFIED_WALLET_BALANCE');
+
+      const settlement = liveCtx.db.run(
+        `INSERT INTO settlements (
+          responder_id, amount_toman, sheba_number, status, execution_mode, created_at
+        ) VALUES (?, ?, ?, 'requested', 'manual_external', ?)`,
+        responder!.id,
+        125000,
+        'IR123456789012345678901234',
+        now
+      );
+      liveCtx.db.run(
+        `INSERT INTO settlements (
+          responder_id, amount_toman, sheba_number, status, created_at
+        ) VALUES (?, ?, ?, 'approved_paid', ?)`,
+        responder!.id,
+        70000,
+        'IR123456789012345678901234',
+        now
+      );
+
+      const missingAttestation = await request(liveCtx.app)
+        .post(`/api/payments/admin/settlements/${settlement.lastInsertRowid}/process`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          decision: 'approved_paid',
+          bankReferenceCode: 'TEST-REAL-REF-1001',
+          note: 'رسید بانکی واقعی مشاهده شد',
+        })
+        .expect(409);
+      expect(missingAttestation.body.error.code).toBe('EXTERNAL_TRANSFER_CONFIRMATION_REQUIRED');
+      expect(
+        liveCtx.db.get<{ status: string }>(
+          'SELECT status FROM settlements WHERE id = ?',
+          settlement.lastInsertRowid
+        )?.status
+      ).toBe('requested');
+
+      const missingReference = await request(liveCtx.app)
+        .post(`/api/payments/admin/settlements/${settlement.lastInsertRowid}/process`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          decision: 'approved_paid',
+          note: 'رسید بانکی واقعی مشاهده شد',
+          externalTransferConfirmed: true,
+        })
+        .expect(400);
+      expect(missingReference.body.error.code).toBe('BANK_REF_REQUIRED');
+
+      const accepted = await request(liveCtx.app)
+        .post(`/api/payments/admin/settlements/${settlement.lastInsertRowid}/process`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          decision: 'approved_paid',
+          bankReferenceCode: 'TEST-REAL-REF-1001',
+          note: 'رسید بانکی واقعی مشاهده و تطبیق شد',
+          externalTransferConfirmed: true,
+        })
+        .expect(200);
+      expect(accepted.body.result.executionMode).toBe('manual_external');
+      expect(accepted.body.result.simulationOnly).toBe(false);
+      expect(accepted.body.result.payoutExecutedByPlatform).toBe(false);
+      expect(accepted.body.result.bankTransferVerifiedByProvider).toBe(false);
+
+      const report = await request(liveCtx.app)
+        .get('/api/payments/admin/reconciliation')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(report.body.report.summary.settlementsPaidToman).toBe(125000);
+      expect(report.body.report.sandbox.settlementsPaidToman).toBe(0);
+      expect(report.body.report.excludedUnverified.legacySettlementsPaidToman).toBe(70000);
+
+      const gatewayStatus = await request(liveCtx.app)
+        .get('/api/payments/gateway-info')
+        .expect(200);
+      expect(gatewayStatus.body.gateway.connectionVerified).toBe(false);
+      expect(gatewayStatus.body.gateway.noticeFa).toContain('اثبات نمی‌کند');
+    } finally {
+      liveCtx.db.close();
+    }
+  });
+
+  it('۲۱. پذیرش پیامک کاوه‌نگار را فقط با پاسخ معتبر و شناسه واقعی ثبت می‌کند؛ Sandbox شناسه provider ندارد', async () => {
+    const provider = new KavenegarSmsProvider('test-only-key', 'test-sender');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            return: { status: 200, message: 'تایید شد' },
+            entries: [{ messageid: 123456789, status: 1, statustext: 'در صف ارسال' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+      const accepted = await provider.sendSms('09120000000', 'پیام آزمون');
+      expect(accepted).toEqual({
+        status: 'provider_accepted',
+        providerName: 'kavenegar',
+        providerMessageId: '123456789',
+      });
+
+      const invalidResponses = [
+        {
+          httpStatus: 200,
+          body: { return: { status: 200 }, entries: [{ status: 1 }] },
+        },
+        {
+          httpStatus: 200,
+          body: { return: { status: 500 }, entries: [{ messageid: 123, status: 1 }] },
+        },
+        {
+          httpStatus: 200,
+          body: { return: { status: 200 }, entries: [{ messageid: 123, status: 11 }] },
+        },
+        {
+          httpStatus: 503,
+          body: { return: { status: 200 }, entries: [{ messageid: 123, status: 1 }] },
+        },
+      ];
+      for (const invalid of invalidResponses) {
+        fetchMock.mockResolvedValueOnce(
+          new Response(JSON.stringify(invalid.body), {
+            status: invalid.httpStatus,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+        await expect(provider.sendSms('09120000000', 'پیام آزمون')).rejects.toThrow();
+      }
+
+      const sandboxResult = await new SandboxOutboxSmsProvider().sendSms(
+        '09120000000',
+        'پیام شبیه‌سازی'
+      );
+      expect(sandboxResult).toEqual({
+        status: 'sandbox_logged',
+        providerName: 'sandbox_outbox',
+        providerMessageId: null,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 
 });

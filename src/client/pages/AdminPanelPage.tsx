@@ -33,6 +33,18 @@ type AdminTab =
   | 'users'
   | 'settings_audit';
 
+interface SettlementReviewDraft {
+  bankReferenceCode: string;
+  note: string;
+  externalTransferConfirmed: boolean;
+}
+
+const EMPTY_SETTLEMENT_REVIEW_DRAFT: SettlementReviewDraft = {
+  bankReferenceCode: '',
+  note: '',
+  externalTransferConfirmed: false,
+};
+
 interface ExecutiveDashboardResponse {
   operational: {
     totalRequests: number;
@@ -53,6 +65,14 @@ interface ExecutiveDashboardResponse {
     settlementsPaidToman: number;
     settlementsPendingToman: number;
   };
+  financialGateway: {
+    providerName: string;
+    isSandbox: boolean;
+    connectionVerified: boolean;
+    noticeFa: string;
+  };
+  financialSandbox: Record<string, number>;
+  financialExcludedUnverified: Record<string, number>;
   geographyReadiness: Array<{
     provinceId: number;
     slug: string;
@@ -105,7 +125,15 @@ export function AdminPanelPage() {
   const [provinces, setProvinces] = useState<Array<Record<string, unknown>>>([]);
   const [geoHistory, setGeoHistory] = useState<Array<Record<string, unknown>>>([]);
   const [financeReport, setFinanceReport] = useState<{
+    gateway: {
+      providerName: string;
+      isSandbox: boolean;
+      connectionVerified: boolean;
+      noticeFa: string;
+    };
     summary: Record<string, number>;
+    sandbox: Record<string, number>;
+    excludedUnverified: Record<string, number>;
     recentTransactions: Array<Record<string, unknown>>;
     settlements: Array<Record<string, unknown>>;
   } | null>(null);
@@ -131,11 +159,9 @@ export function AdminPanelPage() {
     centerLng: '50.0041',
     radiusKm: '15',
   });
-  const [refundForm, setRefundForm] = useState({
-    requestId: '',
-    amountToman: '',
-    reason: '',
-  });
+  const [settlementDrafts, setSettlementDrafts] = useState<
+    Record<number, SettlementReviewDraft>
+  >({});
   const [newStaffForm, setNewStaffForm] = useState({
     phone: '',
     fullName: '',
@@ -205,7 +231,15 @@ export function AdminPanelPage() {
       } else if (tab === 'finance') {
         const res = await apiFetch<{
           report: {
+            gateway: {
+              providerName: string;
+              isSandbox: boolean;
+              connectionVerified: boolean;
+              noticeFa: string;
+            };
             summary: Record<string, number>;
+            sandbox: Record<string, number>;
+            excludedUnverified: Record<string, number>;
             recentTransactions: Array<Record<string, unknown>>;
             settlements: Array<Record<string, unknown>>;
           };
@@ -401,48 +435,79 @@ export function AdminPanelPage() {
     }
   };
 
+  const updateSettlementDraft = (
+    settlementId: number,
+    patch: Partial<SettlementReviewDraft>
+  ) => {
+    setSettlementDrafts((current) => ({
+      ...current,
+      [settlementId]: {
+        ...EMPTY_SETTLEMENT_REVIEW_DRAFT,
+        ...current[settlementId],
+        ...patch,
+      },
+    }));
+  };
+
   const handleProcessSettlement = async (
     settlementId: number,
     decision: 'approved_paid' | 'rejected'
   ) => {
     clearAlerts();
+    const draft = settlementDrafts[settlementId] ?? EMPTY_SETTLEMENT_REVIEW_DRAFT;
+    const settlement = financeReport?.settlements.find(
+      (item) => Number(item.id) === settlementId
+    );
+    const isSandbox = settlement?.execution_mode === 'sandbox_simulated';
+
+    if (decision === 'approved_paid' && !isSandbox) {
+      if (draft.bankReferenceCode.trim().length < 4) {
+        setErrorMsg('شناسه مرجع را از رسید واقعی وارد کنید؛ سامانه آن را با بانک تطبیق نمی‌دهد.');
+        return;
+      }
+      if (draft.note.trim().length < 5 || !draft.externalTransferConfirmed) {
+        setErrorMsg('یادداشت ممیزی و تأیید مشاهده رسید واقعی بانکی الزامی است.');
+        return;
+      }
+    }
+    if (decision === 'rejected' && draft.note.trim().length < 5) {
+      setErrorMsg('برای رد درخواست، دلیل واقعی حداقل ۵ کاراکتری وارد کنید.');
+      return;
+    }
+
     try {
-      await apiFetch(`/api/payments/admin/settlements/${settlementId}/process`, {
+      const response = await apiFetch<{
+        result: { simulationOnly: boolean; bankTransferVerifiedByProvider: boolean };
+      }>(`/api/payments/admin/settlements/${settlementId}/process`, {
         method: 'POST',
         body: JSON.stringify({
           decision,
           bankReferenceCode:
-            decision === 'approved_paid' ? `SATNA-${Date.now()}` : undefined,
-          note:
-            decision === 'approved_paid'
-              ? 'واریز پایا/ساتنا انجام و تأیید شد'
-              : 'مغایرت شبای بانکی — برگشت مبلغ به کیف پول امدادگر',
+            decision === 'approved_paid' && !isSandbox
+              ? draft.bankReferenceCode.trim()
+              : undefined,
+          note: draft.note.trim() || undefined,
+          externalTransferConfirmed:
+            decision === 'approved_paid' && !isSandbox
+              ? draft.externalTransferConfirmed
+              : undefined,
         }),
       });
-      setFeedback('وضعیت تسویه‌حساب امدادگر ثبت شد.');
+      setSettlementDrafts((current) => {
+        const next = { ...current };
+        delete next[settlementId];
+        return next;
+      });
+      setFeedback(
+        response.result.simulationOnly
+          ? 'فقط شبیه‌سازی Sandbox ثبت شد؛ هیچ وجه واقعی جابه‌جا نشده است.'
+          : decision === 'approved_paid'
+            ? 'ثبت دستی بر پایه تأیید مدیر انجام شد؛ سامانه انتقال یا استعلام بانکی خودکار انجام نداده است.'
+            : 'رد درخواست و برگشت مبلغ به کیف پول ثبت شد.'
+      );
       await loadTabData('finance');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'خطا در پردازش تسویه');
-    }
-  };
-
-  const handleRefund = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearAlerts();
-    try {
-      await apiFetch('/api/payments/admin/refunds', {
-        method: 'POST',
-        body: JSON.stringify({
-          requestId: Number(refundForm.requestId),
-          amountToman: Number(refundForm.amountToman),
-          reason: refundForm.reason,
-        }),
-      });
-      setRefundForm({ requestId: '', amountToman: '', reason: '' });
-      setFeedback('بازپرداخت وجه (Refund) و اصلاح دفترکل مالی ثبت شد.');
-      await loadTabData('finance');
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'خطا در ثبت بازپرداخت');
     }
   };
 
@@ -484,13 +549,19 @@ export function AdminPanelPage() {
   const handleRetrySms = async (smsId: number) => {
     clearAlerts();
     try {
-      await apiFetch(`/api/notifications/admin/${smsId}/retry`, {
-        method: 'POST',
-      });
-      setFeedback('تلاش مجدد ارسال پیامک انجام شد.');
+      const response = await apiFetch<{
+        result: { acceptedByProvider: boolean; simulationOnly: boolean };
+      }>(`/api/notifications/admin/${smsId}/retry`, { method: 'POST' });
+      setFeedback(
+        response.result.acceptedByProvider
+          ? 'درخواست پیامک توسط API ارائه‌دهنده پذیرفته شد؛ تحویل به گوشی تأیید نشده است.'
+          : response.result.simulationOnly
+            ? 'فقط در صندوق Sandbox ثبت شد؛ پیامک واقعی ارسال نشده است.'
+            : 'پذیرش پیامک توسط ارائه‌دهنده تأیید نشد.'
+      );
       await loadTabData('settings_audit');
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'خطا در ارسال مجدد پیامک');
+      setErrorMsg(err instanceof Error ? err.message : 'پذیرش مجدد پیامک تأیید نشد');
     }
   };
 
@@ -641,6 +712,16 @@ export function AdminPanelPage() {
       {/* ۱. گزارش‌ها */}
       {activeTab === 'reports' && reports && (
         <div className="space-y-6 text-xs">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 space-y-1">
+            <div className="font-extrabold">مبنای گزارش مالی</div>
+            <p>
+              جمع‌های اصلی فقط پرداخت‌های غیر-Sandbox با پاسخ تأیید سرور را شامل می‌شوند؛ بازپرداخت‌های تأییدنشده و داده‌های آزمایشی از آن‌ها جدا هستند. تسویه‌های دستی صرفاً تأیید مدیرند و استعلام بانکی خودکار ندارند.
+            </p>
+            <p>{reports.financialGateway.noticeFa}</p>
+            <p>
+              Sandbox جداگانه: {formatToman(reports.financialSandbox.grossPaymentsToman || 0)} پرداخت شبیه‌سازی‌شده؛ وجه واقعی محسوب نمی‌شود.
+            </p>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { l: 'کل مأموریت‌های ثبت‌شده', v: reports.operational.totalRequests },
@@ -1340,129 +1421,215 @@ export function AdminPanelPage() {
         </div>
       )}
 
-      {/* ۶. مدیریت مالی، بازپرداخت و تسویه امدادگران */}
+      {/* ۶. گزارش مالی، بازپرداختِ مسدود تا اتصال واقعی، و تسویه دستی شفاف */}
       {activeTab === 'finance' && financeReport && (
         <div className="space-y-6 text-xs">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 space-y-1.5">
+            <div className="font-extrabold">مبنای گزارش و محدودیت‌های مالی</div>
+            <p>
+              جمع اصلی فقط پرداخت‌های غیر-Sandbox با پاسخ تأیید سمت سرور را دربرمی‌گیرد. بازپرداخت فقط با مدرک تأیید provider شمرده می‌شود؛ تسویه دستی، صرفاً ثبت مدیر پس از مشاهده رسید است و اتصال یا استعلام بانکی خودکار ندارد.
+            </p>
+            <p>{financeReport.gateway.noticeFa}</p>
+            <p>
+              بازپرداخت در این نسخه غیرفعال است: تا پیاده‌سازی و آزمون اتصال واقعی، هیچ فاکتور، وضعیت پرداخت یا دفترکلی با درخواست بازپرداخت تغییر نمی‌کند.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="text-slate-500">درآمد ناخالص تأییدشده</div>
+              <div className="text-slate-500">پرداخت‌های غیر-Sandbox تأییدشده</div>
               <div className="text-lg font-extrabold text-slate-900 mt-1">
                 {formatToman(financeReport.summary.grossVerifiedToman || 0)}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="text-slate-500">مجموع بازپرداخت‌ها (Refund)</div>
+              <div className="text-slate-500">بازپرداخت‌های تأییدشده توسط provider</div>
               <div className="text-lg font-extrabold text-rose-700 mt-1">
                 {formatToman(financeReport.summary.totalRefundedToman || 0)}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="text-slate-500">کمیسیون پلتفرم</div>
+              <div className="text-slate-500">کمیسیون فاکتورهای پرداخت غیر-Sandbox</div>
               <div className="text-lg font-extrabold text-emerald-700 mt-1">
                 {formatToman(financeReport.summary.platformCommissionToman || 0)}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="text-slate-500">تسویه‌های در انتظار پرداخت شبا</div>
+              <div className="text-slate-500">تسویه‌های ثبت‌شده با تأیید دستی مدیر</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-1">
+                {formatToman(financeReport.summary.settlementsPaidToman || 0)}
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <div className="text-slate-500">درخواست‌های دستی در انتظار رسیدگی</div>
               <div className="text-lg font-extrabold text-amber-700 mt-1">
                 {formatToman(financeReport.summary.settlementsPendingToman || 0)}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* فرم بازپرداخت */}
-            <form
-              onSubmit={handleRefund}
-              className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 h-fit"
-            >
-              <h3 className="font-extrabold text-sm text-slate-900">
-                ثبت بازپرداخت وجه (Refund کامل یا جزئی با اصلاح خودکار دفترکل)
-              </h3>
-              <input
-                type="number"
-                required
-                placeholder="شناسه عددی مأموریت (Request ID)"
-                value={refundForm.requestId}
-                onChange={(e) =>
-                  setRefundForm({ ...refundForm, requestId: e.target.value })
-                }
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
-              />
-              <input
-                type="number"
-                required
-                placeholder="مبلغ بازپرداخت (تومان)"
-                value={refundForm.amountToman}
-                onChange={(e) =>
-                  setRefundForm({ ...refundForm, amountToman: e.target.value })
-                }
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
-              />
-              <input
-                type="text"
-                required
-                placeholder="دلیل قانونی/عملیاتی بازپرداخت (حداقل ۵ کاراکتر)"
-                value={refundForm.reason}
-                onChange={(e) =>
-                  setRefundForm({ ...refundForm, reason: e.target.value })
-                }
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
-              />
-              <button
-                type="submit"
-                className="bg-rose-600 text-white font-extrabold px-4 py-2 rounded-xl"
-              >
-                اجرای بازپرداخت و ثبت سند برگشتی
-              </button>
-            </form>
+          <div className="rounded-2xl border border-indigo-300 bg-indigo-50 p-4 text-indigo-950 space-y-1.5">
+            <h3 className="font-extrabold text-sm">خلاصهٔ Sandbox — جدا از جمع واقعی</h3>
+            <p>
+              پرداخت شبیه‌سازی‌شده: {formatToman(financeReport.sandbox.grossPaymentsToman || 0)}
+              {' '}({Number(financeReport.sandbox.verifiedPaymentsCount || 0).toLocaleString('fa-IR')} تراکنش)؛ این مبالغ پول واقعی نیستند.
+            </p>
+            <p>
+              تسویهٔ شبیه‌سازی‌شده: {formatToman(financeReport.sandbox.settlementsPaidToman || 0)}
+              {' '}({Number(financeReport.sandbox.settlementsPaidCount || 0).toLocaleString('fa-IR')} مورد)؛ وجه بانکی جابه‌جا نشده است.
+            </p>
+          </div>
 
-            {/* لیست درخواست‌های تسویه شبا */}
+          {(Number(financeReport.excludedUnverified.legacyRefundsCount || 0) > 0 ||
+            Number(financeReport.excludedUnverified.legacySettlementsPaidCount || 0) > 0 ||
+            Number(financeReport.excludedUnverified.legacySettlementsPendingCount || 0) > 0) && (
+            <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-rose-950">
+              رکوردهای قدیمیِ راستی‌آزمایی‌نشده از جمع اصلی حذف شده‌اند: بازپرداخت{' '}
+              {formatToman(financeReport.excludedUnverified.legacyRefundsToman || 0)}؛ تسویهٔ قدیمیِ ثبت‌شده{' '}
+              {formatToman(financeReport.excludedUnverified.legacySettlementsPaidToman || 0)}؛ درخواست قدیمیِ در انتظار{' '}
+              {formatToman(financeReport.excludedUnverified.legacySettlementsPendingToman || 0)}.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-rose-200 p-5 space-y-3 h-fit">
+              <h3 className="font-extrabold text-sm text-slate-900">بازپرداخت مشتری</h3>
+              <p className="text-rose-900 font-bold">
+                اجرای بازپرداخت در این نسخه مسدود است. endpoint نیز با خطای REFUND_PROVIDER_UNAVAILABLE رد می‌کند و هیچ وضعیت، فاکتور، دفترکل یا پیام موفقیتی ثبت نمی‌کند.
+              </p>
+              <p className="text-slate-600">
+                تا زمان اتصال و آزمون provider واقعی، پیگیری مالی را خارج از سامانه و طبق رویهٔ مصوب انجام دهید. صرف تأیید مدیر یا ثبت دلیل، انتقال وجه را اثبات نمی‌کند.
+              </p>
+            </div>
+
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
               <h3 className="font-extrabold text-sm text-slate-900">
-                صف درخواست‌های تسویه شبای امدادگران
+                صف تسویهٔ امدادگران — Sandbox یا تأیید دستی مستند
               </h3>
+              <p className="text-slate-600">
+                در مسیر دستی، ابتدا انتقال را خارج از سامانه انجام دهید؛ سپس مرجع واقعی، یادداشت ممیزی و تأیید مشاهده رسید را ثبت کنید. نرم‌افزار بانک را استعلام نمی‌کند.
+              </p>
               {financeReport.settlements.length === 0 ? (
                 <p className="text-slate-500">درخواست تسویه‌ای ثبت نشده است.</p>
               ) : (
-                financeReport.settlements.map((s) => (
-                  <div
-                    key={Number(s.id)}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
-                  >
-                    <div className="flex justify-between font-bold">
-                      <span>
-                        {String(s.responder_name)} ({formatToman(Number(s.amount_toman))})
-                      </span>
-                      <span>{String(s.status)}</span>
-                    </div>
-                    <div className="font-mono text-[11px] text-slate-500">
-                      شبا: {String(s.sheba_number)}
-                    </div>
-                    {s.status === 'requested' && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleProcessSettlement(Number(s.id), 'approved_paid')
-                          }
-                          className="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg"
-                        >
-                          تأیید واریز پایا
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleProcessSettlement(Number(s.id), 'rejected')
-                          }
-                          className="bg-rose-600 text-white font-bold px-3 py-1 rounded-lg"
-                        >
-                          رد و برگشت به کیف پول
-                        </button>
+                financeReport.settlements.map((s) => {
+                  const settlementId = Number(s.id);
+                  const mode = String(s.execution_mode || 'legacy_unverified');
+                  const draft = settlementDrafts[settlementId] ?? EMPTY_SETTLEMENT_REVIEW_DRAFT;
+                  const isRequested = s.status === 'requested';
+                  const statusLabel =
+                    s.status === 'rejected'
+                      ? 'ردشده؛ مبلغ به کیف پول برگشته'
+                      : s.status === 'requested'
+                        ? 'در انتظار رسیدگی'
+                        : mode === 'sandbox_simulated'
+                          ? 'Sandbox: شبیه‌سازی؛ وجه واقعی جابه‌جا نشده'
+                          : mode === 'manual_external'
+                            ? 'ثبت دستی با تأیید مدیر؛ استعلام بانکی نشده'
+                            : 'وضعیت قدیمی/راستی‌آزمایی‌نشده';
+                  const modeLabel =
+                    mode === 'sandbox_simulated'
+                      ? 'شبیه‌سازی Sandbox'
+                      : mode === 'manual_external'
+                        ? 'انتقال خارج از سامانه با تأیید دستی'
+                        : 'قدیمی/نامشخص';
+                  return (
+                    <div
+                      key={settlementId}
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
+                    >
+                      <div className="flex flex-wrap justify-between gap-2 font-bold">
+                        <span>
+                          {String(s.responder_name)} ({formatToman(Number(s.amount_toman))})
+                        </span>
+                        <span className={mode === 'legacy_unverified' ? 'text-rose-800' : 'text-slate-700'}>
+                          {statusLabel}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))
+                      <div className="font-mono text-[11px] text-slate-500">
+                        شبا: {String(s.sheba_number)}
+                      </div>
+                      <div>روش ثبت: <strong>{modeLabel}</strong></div>
+                      {typeof s.bank_reference_code === 'string' && s.bank_reference_code && (
+                        <div className="font-mono text-[11px] text-slate-600">
+                          {mode === 'manual_external'
+                            ? 'مرجع واردشده دستی؛ اصالت بانکی استعلام نشده:'
+                            : 'مرجع تاریخیِ راستی‌آزمایی‌نشده:'}{' '}
+                          {s.bank_reference_code}
+                        </div>
+                      )}
+                      {typeof s.note === 'string' && s.note && (
+                        <div className="text-slate-600">یادداشت: {s.note}</div>
+                      )}
+                      {isRequested && (
+                        <div className="space-y-2 border-t border-slate-200 pt-2">
+                          {mode === 'manual_external' && (
+                            <>
+                              <label className="block font-bold">
+                                شناسهٔ مرجع واقعی از رسید پایا/ساتنا
+                                <input
+                                  type="text"
+                                  value={draft.bankReferenceCode}
+                                  onChange={(e) => updateSettlementDraft(settlementId, { bankReferenceCode: e.target.value })}
+                                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono"
+                                  placeholder="مرجع واقعی را از رسید بانکی وارد کنید"
+                                />
+                              </label>
+                              <label className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-amber-950">
+                                <input
+                                  type="checkbox"
+                                  checked={draft.externalTransferConfirmed}
+                                  onChange={(e) => updateSettlementDraft(settlementId, { externalTransferConfirmed: e.target.checked })}
+                                  className="mt-0.5"
+                                />
+                                <span>انتقال را خارج از سامانه انجام داده‌ام و رسید واقعی را مشاهده و تطبیق کرده‌ام؛ سامانه استعلام بانکی خودکار ندارد.</span>
+                              </label>
+                            </>
+                          )}
+                          {mode === 'sandbox_simulated' && (
+                            <p className="rounded-lg bg-indigo-50 p-2 text-indigo-950">
+                              این تأیید فقط Sandbox است؛ مرجع بانکی وارد نکنید و وجه واقعی جابه‌جا نمی‌شود.
+                            </p>
+                          )}
+                          <label className="block font-bold">
+                            یادداشت ممیزی{mode === 'sandbox_simulated' ? ' (اختیاری در Sandbox)' : ''}
+                            <input
+                              type="text"
+                              value={draft.note}
+                              onChange={(e) => updateSettlementDraft(settlementId, { note: e.target.value })}
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                              placeholder={mode === 'manual_external' ? 'یادداشت واقعی درباره رسید و انتقال' : 'یادداشت یا دلیل رد'}
+                            />
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {mode !== 'legacy_unverified' && (
+                              <button
+                                type="button"
+                                disabled={mode === 'manual_external' && (
+                                  draft.bankReferenceCode.trim().length < 4 ||
+                                  draft.note.trim().length < 5 ||
+                                  !draft.externalTransferConfirmed
+                                )}
+                                onClick={() => void handleProcessSettlement(settlementId, 'approved_paid')}
+                                className="disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg"
+                              >
+                                {mode === 'sandbox_simulated' ? 'ثبت شبیه‌سازی Sandbox' : 'ثبت دستی پس از انتقال واقعی'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={draft.note.trim().length < 5}
+                              onClick={() => void handleProcessSettlement(settlementId, 'rejected')}
+                              className="disabled:opacity-40 disabled:cursor-not-allowed bg-rose-600 text-white font-bold px-3 py-1.5 rounded-lg"
+                            >
+                              رد و برگشت مبلغ به کیف پول
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1584,6 +1751,9 @@ export function AdminPanelPage() {
                     : JSON.stringify(s.value);
                 const draftVal =
                   settingDrafts[key] !== undefined ? settingDrafts[key] : defaultText;
+                const isBooleanSetting =
+                  key === 'allow_ev_services' || key === 'allow_postpay_debt';
+                const environmentLocked = Boolean(s.environmentLocked);
                 return (
                   <div
                     key={key}
@@ -1597,19 +1767,43 @@ export function AdminPanelPage() {
                         {key}
                       </span>
                     </div>
+                    {environmentLocked && (
+                      <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900 font-bold">
+                        وضعیت مؤثر: {isBooleanSetting && s.effectiveValue === true ? 'فعال' : 'غیرفعال'}؛ قفل محیط سرور اجازه فعال‌سازی این قابلیت را نمی‌دهد.
+                      </p>
+                    )}
                     <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        dir="ltr"
-                        value={draftVal}
-                        onChange={(e) =>
-                          setSettingDrafts({
-                            ...settingDrafts,
-                            [key]: e.target.value,
-                          })
-                        }
-                        className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono"
-                      />
+                      {isBooleanSetting ? (
+                        <select
+                          dir="ltr"
+                          value={draftVal}
+                          onChange={(e) =>
+                            setSettingDrafts({
+                              ...settingDrafts,
+                              [key]: e.target.value,
+                            })
+                          }
+                          className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono"
+                        >
+                          <option value="true" disabled={environmentLocked}>
+                            true — فعال
+                          </option>
+                          <option value="false">false — غیرفعال</option>
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          dir="ltr"
+                          value={draftVal}
+                          onChange={(e) =>
+                            setSettingDrafts({
+                              ...settingDrafts,
+                              [key]: e.target.value,
+                            })
+                          }
+                          className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => void handleSaveSetting(key, draftVal)}
@@ -1625,8 +1819,11 @@ export function AdminPanelPage() {
 
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2.5">
               <h3 className="font-extrabold text-sm text-slate-900">
-                صندوق خروجی اعلان و پیامک (شفافیت ارسال واقعی / آزمایشی)
+                صندوق خروجی اعلان و پیامک (شفافیت پذیرش provider / Sandbox)
               </h3>
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-950">
+                «پذیرفته‌شده توسط ارائه‌دهنده» به معنی تحویل قطعی به گوشی نیست؛ گزارش تحویل مخابراتی در این نسخه دریافت نمی‌شود.
+              </p>
               <div className="max-h-72 overflow-y-auto space-y-2">
                 {smsOutbox.map((sms) => (
                   <div
@@ -1635,11 +1832,20 @@ export function AdminPanelPage() {
                   >
                     <div className="flex justify-between font-bold">
                       <span>{String(sms.title || sms.event_type)}</span>
-                      <span className="text-amber-800">
-                        {String(sms.delivery_status || sms.status)}
+                      <span className="text-amber-800 text-right">
+                        {sms.delivery_status === 'sent'
+                          ? 'پذیرفته‌شده توسط API؛ تحویل نهایی تأیید نشده'
+                          : sms.delivery_status === 'sandbox_logged'
+                            ? 'ثبت محلی Sandbox؛ ارسال واقعی انجام نشده'
+                            : String(sms.delivery_status || sms.status)}
                       </span>
                     </div>
                     <p className="text-slate-700">{String(sms.body)}</p>
+                    {typeof sms.provider_message_id === 'string' && sms.provider_message_id && (
+                      <p className="font-mono text-[10px] text-slate-500">
+                        شناسهٔ واقعی پیام در provider: {sms.provider_message_id}
+                      </p>
+                    )}
                     {sms.delivery_status === 'failed' && (
                       <button
                         type="button"

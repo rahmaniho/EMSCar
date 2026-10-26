@@ -51,7 +51,7 @@ const envSchema = z.object({
   ENABLE_SECURITY_AUDIT_LOG: booleanFromEnv(true),
 
   FEATURE_ENABLE_DEV_SEED: booleanFromEnv(true),
-  FEATURE_ALLOW_EV_SERVICES: booleanFromEnv(true),
+  FEATURE_ALLOW_EV_SERVICES: booleanFromEnv(false),
   FEATURE_ALLOW_POSTPAY_DEBT: booleanFromEnv(false),
   // فعال‌سازی ثبت درخواست واقعی در Production فقط پس از آمادگی عملیاتی و تأیید مالک محصول
   ENABLE_PUBLIC_OPERATIONS: booleanFromEnv(false),

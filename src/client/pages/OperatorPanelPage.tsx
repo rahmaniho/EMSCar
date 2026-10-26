@@ -24,6 +24,8 @@ interface StaffQueueItem {
   tracking_code: string;
   status: RequestState;
   payment_status: string;
+  payment_is_sandbox: number | null;
+  has_verified_refund: number;
   operator_escalation_required: number;
   operator_escalation_reason: string | null;
   customer_name: string;
@@ -100,6 +102,9 @@ export function OperatorPanelPage() {
     'dispatch'
   );
   const [queue, setQueue] = useState<StaffQueueItem[]>([]);
+  const [postpayDebtEnabled, setPostpayDebtEnabled] = useState(false);
+  const [debtTargetRequestId, setDebtTargetRequestId] = useState<number | null>(null);
+  const [debtReason, setDebtReason] = useState('');
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [readiness, setReadiness] = useState<ReadinessProvince[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketDetail | null>(null);
@@ -128,14 +133,16 @@ export function OperatorPanelPage() {
       if (escalatedOnly) qs.set('escalated', 'true');
       const queryStr = qs.toString() ? `?${qs.toString()}` : '';
 
-      const [qRes, tRes, rRes] = await Promise.all([
+      const [qRes, tRes, rRes, capabilityRes] = await Promise.all([
         apiFetch<{ queue: StaffQueueItem[] }>(`/api/requests/staff/queue${queryStr}`),
         apiFetch<{ tickets: TicketItem[] }>('/api/support/tickets'),
         apiFetch<{ readiness: ReadinessProvince[] }>('/api/geography/admin/readiness'),
+        apiFetch<{ postpayDebtEnabled: boolean }>('/api/payments/staff/capabilities'),
       ]);
       setQueue(qRes.queue);
       setTickets(tRes.tickets);
       setReadiness(rRes.readiness);
+      setPostpayDebtEnabled(capabilityRes.postpayDebtEnabled);
     } catch (err) {
       setErrorMsg(
         err instanceof Error ? err.message : 'خطا در بارگذاری میز فرماندهی اپراتور'
@@ -225,21 +232,25 @@ export function OperatorPanelPage() {
     }
   };
 
-  const handleApproveEmergencyDebt = async (requestId: number) => {
+  const handleApproveEmergencyDebt = async (requestId: number, reason: string) => {
     setFeedback(null);
     setErrorMsg(null);
     try {
-      await apiFetch('/api/payments/staff/approve-debt', {
+      const result = await apiFetch<{
+        amountToman: number;
+        paymentReceived: false;
+      }>('/api/payments/staff/approve-debt', {
         method: 'POST',
-        body: JSON.stringify({
-          requestId,
-          reason: 'قطعی موقت شبکه بانکی در محل حادثه — ثبت مهلت پرداخت اضطراری توسط مرکز پیام',
-        }),
+        body: JSON.stringify({ requestId, reason: reason.trim() }),
       });
-      setFeedback('پرداخت پس‌کرایه / بدهی مجاز اضطراری برای این پرونده ثبت گردید.');
+      setDebtTargetRequestId(null);
+      setDebtReason('');
+      setFeedback(
+        `بدهی ${formatToman(result.amountToman)} برای پیگیری ثبت شد؛ هیچ وجهی دریافت یا پرداخت تأیید نشد.`
+      );
       await loadAll();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'خطا در ثبت مهلت پرداخت اضطراری');
+      setErrorMsg(err instanceof Error ? err.message : 'خطا در ثبت بدهی پس‌پرداخت');
     }
   };
 
@@ -493,7 +504,18 @@ export function OperatorPanelPage() {
                         </div>
                         <div className="text-slate-500">
                           مبلغ: {formatToman(r.final_price_toman ?? r.estimated_price_toman)} |
-                          وضعیت پرداخت: <strong>{r.payment_status}</strong> | ثبت:{' '}
+                          وضعیت پرداخت:{' '}
+                          <strong>
+                            {r.payment_is_sandbox === 1
+                              ? 'Sandbox آزمایشی؛ وجه واقعی جابه‌جا نشده'
+                              : ['refunded', 'partially_refunded'].includes(r.payment_status) && r.has_verified_refund !== 1
+                                ? 'بازپرداخت قدیمی/راستی‌آزمایی‌نشده'
+                                : r.payment_status === 'paid' && r.payment_is_sandbox === null
+                                  ? 'پرداخت قدیمی/بدون مدرک provider'
+                                  : r.payment_status === 'approved_debt'
+                                    ? 'بدهی ثبت‌شده؛ وجه دریافت نشده'
+                                    : r.payment_status}
+                          </strong>{' '}| ثبت:{' '}
                           {formatDateTimeFa(r.created_at)}
                         </div>
                       </div>
@@ -520,15 +542,24 @@ export function OperatorPanelPage() {
                           </>
                         )}
 
-                        {r.status === 'Completed' && r.payment_status !== 'paid' && (
-                          <button
-                            type="button"
-                            onClick={() => void handleApproveEmergencyDebt(r.id)}
-                            className="bg-indigo-100 hover:bg-indigo-200 text-indigo-950 font-bold px-3 py-2 rounded-xl"
-                          >
-                            ثبت مهلت پرداخت اضطراری
-                          </button>
-                        )}
+                        {postpayDebtEnabled &&
+                          r.status === 'Completed' &&
+                          ['unpaid', 'failed'].includes(r.payment_status) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDebtTargetRequestId((current) =>
+                                  current === r.id ? null : r.id
+                                );
+                                setDebtReason('');
+                              }}
+                              className="bg-indigo-100 hover:bg-indigo-200 text-indigo-950 font-bold px-3 py-2 rounded-xl"
+                            >
+                              {debtTargetRequestId === r.id
+                                ? 'بستن فرم بدهی'
+                                : 'ثبت بدهی پس‌پرداخت'}
+                            </button>
+                          )}
 
                         {![
                           'Completed',
@@ -555,6 +586,53 @@ export function OperatorPanelPage() {
                         </Link>
                       </div>
                     </div>
+
+                    {debtTargetRequestId === r.id && (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void handleApproveEmergencyDebt(r.id, debtReason);
+                        }}
+                        className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+                      >
+                        <label className="block font-bold text-indigo-950" htmlFor={`debt-reason-${r.id}`}>
+                          دلیل واقعی و قابل ممیزی برای ثبت بدهی پس‌پرداخت
+                        </label>
+                        <textarea
+                          id={`debt-reason-${r.id}`}
+                          required
+                          minLength={5}
+                          maxLength={500}
+                          value={debtReason}
+                          onChange={(event) => setDebtReason(event.target.value)}
+                          placeholder="علت واقعی را بنویسید؛ متن نمونه یا دلیل از پیش‌فرض ثبت نمی‌شود."
+                          className="w-full rounded-lg border border-indigo-200 bg-white p-3"
+                          rows={3}
+                        />
+                        <p className="text-indigo-900">
+                          ثبت فقط برای خدمت تکمیل‌شده و فاکتور صادرشده ممکن است. این اقدام وجهی دریافت نمی‌کند و پرداخت را تأیید نمی‌کند.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={debtReason.trim().length < 5}
+                            className="rounded-lg bg-indigo-700 px-4 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            ثبت وضعیت بدهی
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDebtTargetRequestId(null);
+                              setDebtReason('');
+                            }}
+                            className="rounded-lg bg-white px-4 py-2 font-bold text-slate-800"
+                          >
+                            انصراف
+                          </button>
+                        </div>
+                      </form>
+                    )}
 
                     {candidates.length > 0 && (
                       <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">

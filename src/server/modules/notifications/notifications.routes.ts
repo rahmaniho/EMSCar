@@ -49,7 +49,13 @@ export function createNotificationsRouter(params: {
       const result = await params.notificationsService.retryFailedSms(
         Number(req.params.id)
       );
-      res.json({ ok: true, result });
+      const statusCode = result.acceptedByProvider ? 200 : result.simulationOnly ? 202 : 502;
+      // HTTP 202 is a successful API exchange (Sandbox only), not provider acceptance.
+      // Keep envelope ok=true so the shared apiFetch client returns the explicit simulation result.
+      res.status(statusCode).json({
+        ok: result.acceptedByProvider || result.simulationOnly,
+        result,
+      });
     })
   );
 

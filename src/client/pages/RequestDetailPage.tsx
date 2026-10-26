@@ -39,6 +39,7 @@ interface RequestDetailData {
   statusLabel: string;
   paymentStatus: string;
   paymentStatusLabel: string;
+  paymentIsSandbox: boolean;
   customer: { id: number; fullName: string; phone: string | null };
   vehicle: {
     brand: string;
@@ -581,7 +582,11 @@ export function RequestDetailPage() {
                 صورتحساب و جزئیات هزینه (تومان)
               </h3>
               <span
-                className={`px-2.5 py-0.5 rounded-full border font-bold ${getStatusBadgeClass(data.paymentStatus)}`}
+                className={`px-2.5 py-0.5 rounded-full border font-bold ${
+                  data.paymentIsSandbox || data.paymentStatusLabel.includes('راستی‌آزمایی') || data.paymentStatusLabel.includes('بدون مدرک')
+                    ? getStatusBadgeClass('pending_gateway')
+                    : getStatusBadgeClass(data.paymentStatus)
+                }`}
               >
                 {data.paymentStatusLabel}
               </span>

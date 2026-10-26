@@ -201,7 +201,7 @@ function buildAll26SlidesHtml() {
         <div class="card">
           <span class="status-pill st-verified" style="margin-bottom:0.4rem;">۵. وضعیت فعلی پروژه</span>
           <h3>هسته نرم‌افزاری کامل و تست‌شده</h3>
-          <p>۱۴ ماژول سطح سرور (پوشش ۱۶ حوزه منطقی)، ۳۵ جدول، کاتالوگ ۱۵ خدمت، رابط‌های ۴ نقش و ۱۸ تست خودکار پاس‌شده در مخزن موجود است؛ این شواهد آمادگی تجاری یا ناوگان واقعی را اثبات نمی‌کنند.</p>
+          <p>۱۴ ماژول سطح سرور (پوشش ۱۶ حوزه منطقی)، ۳۵ جدول، کاتالوگ ۱۵ خدمت، رابط‌های ۴ نقش و ۲۱ تست خودکار پاس‌شده در مخزن موجود است؛ این شواهد آمادگی تجاری یا ناوگان واقعی را اثبات نمی‌کنند.</p>
         </div>
         <div class="card">
           <span class="status-pill st-proposed" style="margin-bottom:0.4rem;">۶. مهم‌ترین هدف مرحله بعد</span>
@@ -347,11 +347,11 @@ function buildAll26SlidesHtml() {
               <td>تأمین کلید نقشه کاشی برداری تجاری در صورت ترافیک بالا</td>
             </tr>
             <tr>
-              <td><strong>پرداخت، دفترکل کیف پول، بازپرداخت و شبا</strong></td>
-              <td>تسویه‌های دستی پراشتباه و تقلب Callback</td>
-              <td>استعلام سمت سرور، ثبت خودکار سهم ۸۵٪/۱۵٪ و مدیریت تسویه شبا</td>
-              <td><span class="status-pill st-proposed">کد کامل / درگاه Sandbox</span></td>
-              <td>اخذ اینماد و ثبت کلید تجاری زرین‌پال و کاوه‌نگار در .env</td>
+              <td><strong>پرداخت Sandbox، کیف پول و درخواست تسویه</strong></td>
+              <td>تقلب Callback، ادعای واریز/بازپرداخت بدون سند</td>
+              <td>Callback با Verify سمت سرور؛ گزارش Sandbox و legacy جداست؛ تسویهٔ زنده دستی و مستند است؛ بازپرداخت واقعی فعلاً مسدود است</td>
+              <td><span class="status-pill st-proposed">پرداخت Sandbox؛ بدون انتقال بانکی</span></td>
+              <td>آزمون provider واقعی، رویهٔ بانکی و تأیید تجاری؛ کلید به‌تنهایی اتصال را ثابت نمی‌کند</td>
             </tr>
           </tbody>
         </table>
@@ -371,9 +371,9 @@ function buildAll26SlidesHtml() {
           <p>خانواده‌ها و خودروهای عبوری در محور قزوین-کرج و قزوین-زنجان که هیچ شناخت محلی از یدک‌کش‌های معتبر منطقه ندارند.</p>
         </div>
         <div class="card">
-          <span class="status-pill st-verified" style="margin-bottom:0.35rem;">تأمین‌کننده سمت عرضه (Supply)</span>
+          <span class="status-pill st-proposed" style="margin-bottom:0.35rem;">بخش عرضهٔ هدف پیشنهادی (نه شریکِ تأییدشده)</span>
           <h3>۳. امدادگران مستقل و مالکان خودروبر/کفی</h3>
-          <p>شریک عملیاتی پلتفرم؛ دریافت‌کننده سفارش‌های نزدیک و هدفمند با تسویه منظم شبا بدون هزینه‌های سنگین تبلیغات انفرادی.</p>
+          <p>فرضیهٔ ارزش پیشنهادی: دریافت درخواست‌های نزدیک و تسویهٔ شفاف؛ نیازمند مصاحبه، توافق واقعی و ارزیابی رویهٔ بانکی است. شریک عملیاتی یا قرارداد تأییدشده‌ای در این متن ادعا نمی‌شود.</p>
         </div>
         <div class="card">
           <span class="status-pill st-proposed" style="margin-bottom:0.35rem;">شریک تجاری پیشنهادی فاز ۲</span>
@@ -850,7 +850,7 @@ function buildAll26SlidesHtml() {
           <div class="card">
             <h3>رسیدگی به شکایات، ارزیابی کیفیت و حریم خصوصی</h3>
             <p>
-              • <strong>حل اختلاف:</strong> انتقال پرونده به وضعیت <code class="mono">UnderSupportReview</code>، ثبت یادداشت داخلی محرمانه اپراتور و امکان بازپرداخت کامل/جزئی.<br/>
+              • <strong>حل اختلاف:</strong> انتقال پرونده به وضعیت <code class="mono">UnderSupportReview</code> و ثبت یادداشت محرمانه؛ بازپرداخت واقعی در نسخه فعلی مسدود است تا اتصال و آزمون provider انجام شود.<br/>
               • <strong>ثبت رخدادها:</strong> ثبت تغییرناپذیر کلیه تصمیمات در <code class="mono">audit_logs</code> و <code class="mono">security_events</code>.
             </p>
           </div>
@@ -874,7 +874,7 @@ function buildAll26SlidesHtml() {
             <tr><td><strong>مدیریت کاربران و دسترسی</strong></td><td>نشست سروری، کوکی HttpOnly، هش scrypt و ۴ نقش RBAC</td><td>ورود دومرحله‌ای پیامکی (OTP) پس از اتصال پنل تجاری</td><td><span class="status-pill st-verified">فعلی آماده</span></td></tr>
             <tr><td><strong>پایگاه‌داده و تراکنش‌ها</strong></td><td>SQLite بومی Node 22 در حالت WAL با ۳۵ جدول و مهاجرت برگشت‌پذیر</td><td>مهاجرت به کلاستر PostgreSQL + افزونه مکانی PostGIS</td><td><span class="status-pill st-verified">تک‌سروره آماده</span></td></tr>
             <tr><td><strong>دیسپچ و موقعیت مکانی</strong></td><td>فرمول Haversine، امتیازدهی چندمعیاره و جریان زنده SSE حافظه</td><td>گذرگاه توزیع‌شده Redis Pub/Sub و مسیریابی ترافیکی جاده‌ای</td><td><span class="status-pill st-verified">پایلوت آماده</span></td></tr>
-            <tr><td><strong>درگاه پرداخت و تسویه</strong></td><td>آداپتور زرین‌پال + حالت Sandbox شفاف + دفترکل و شبا</td><td>اتصال مستقیم شاپرکی/زرین‌پال تجاری و وب‌سرویس تسویه بانکی پایا</td><td><span class="status-pill st-proposed">نیازمند کلید تجاری</span></td></tr>
+            <tr><td><strong>درگاه پرداخت و تسویه</strong></td><td>Verify سمت سرور؛ Sandbox شبیه‌سازی؛ تسویه دستیِ نیازمند مرجع واقعی و تأیید مدیر؛ Refund زنده مسدود</td><td>اتصال تجاریِ آزموده‌شده و web-service بانکیِ تأییدشده</td><td><span class="status-pill st-proposed">اتصال زنده/واریز خودکار تأیید نشده</span></td></tr>
             <tr><td><strong>اعلان‌ها و پیامک</strong></td><td>آداپتور کاوه‌نگار + صف Sandbox Outbox با تلاش مجدد خطا</td><td>خط خدماتی اختصاصی پیامک با اولویت بالا</td><td><span class="status-pill st-proposed">نیازمند کلید تجاری</span></td></tr>
             <tr><td><strong>پایش سلامت و ثبت خطا</strong></td><td>مسیر <code class="mono">/api/health</code>، بکاپ <code class="mono">VACUUM INTO</code> و جداول ممیزی</td><td>پایش متمرکز Prometheus / Sentry و بکاپ خودکار خارج از سرور</td><td><span class="status-pill st-proposed">ارتقای عملیاتی</span></td></tr>
           </tbody>
@@ -1090,7 +1090,7 @@ function buildAll26SlidesHtml() {
         </div>
         <div class="card" style="border-top:3px solid #22D3EE;">
           <h3>۲. دارایی و ارزش پیشنهادی EMSCar</h3>
-          <p>هسته نرم‌افزاری ۱۴ ماژولی با پوشش ۱۶ حوزه منطقی و ۱۸ تست فعلی؛ پیش‌نیازهای ناوگان، مجوز، تعرفه رسمی و سرویس‌های تجاری هنوز باید فراهم و ارزیابی شوند.</p>
+          <p>هسته نرم‌افزاری ۱۴ ماژولی با پوشش ۱۶ حوزه منطقی و ۲۱ تست فعلی؛ پیش‌نیازهای ناوگان، مجوز، تعرفه رسمی و سرویس‌های تجاری هنوز باید فراهم و ارزیابی شوند.</p>
         </div>
         <div class="card" style="border-top:3px solid #22C55E;">
           <h3>۳. قدم عملیاتی بعدی</h3>

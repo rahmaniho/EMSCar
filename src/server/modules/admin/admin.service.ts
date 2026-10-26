@@ -14,6 +14,8 @@ export class AdminService {
   private readonly responders: RespondersService;
   private readonly payments: PaymentsService;
   private readonly geography: GeographyService;
+  private readonly allowEvServicesByEnvironment: boolean;
+  private readonly allowPostpayDebtByEnvironment: boolean;
 
   constructor(params: {
     db: AppDatabase;
@@ -21,12 +23,16 @@ export class AdminService {
     responders: RespondersService;
     payments: PaymentsService;
     geography: GeographyService;
+    allowEvServicesByEnvironment: boolean;
+    allowPostpayDebtByEnvironment: boolean;
   }) {
     this.db = params.db;
     this.audit = params.audit;
     this.responders = params.responders;
     this.payments = params.payments;
     this.geography = params.geography;
+    this.allowEvServicesByEnvironment = params.allowEvServicesByEnvironment;
+    this.allowPostpayDebtByEnvironment = params.allowPostpayDebtByEnvironment;
   }
 
   listUsers() {
@@ -181,15 +187,51 @@ export class AdminService {
       updated_at: string;
     }>('SELECT * FROM system_settings ORDER BY key ASC');
 
-    return rows.map((r) => ({
-      key: r.key,
-      value: JSON.parse(r.value_json),
-      descriptionFa: r.description_fa,
-      updatedAt: r.updated_at,
-    }));
+    return rows.map((r) => {
+      const value = JSON.parse(r.value_json) as unknown;
+      const isFeatureSetting =
+        r.key === 'allow_ev_services' || r.key === 'allow_postpay_debt';
+      const environmentAllowsFeature =
+        r.key === 'allow_ev_services'
+          ? this.allowEvServicesByEnvironment
+          : r.key === 'allow_postpay_debt'
+            ? this.allowPostpayDebtByEnvironment
+            : true;
+      return {
+        key: r.key,
+        value,
+        effectiveValue: isFeatureSetting
+          ? typeof value === 'boolean' && value && environmentAllowsFeature
+          : value,
+        environmentLocked: isFeatureSetting && !environmentAllowsFeature,
+        descriptionFa: r.description_fa,
+        updatedAt: r.updated_at,
+      };
+    });
   }
 
   updateSetting(key: string, value: unknown, adminUserId: number) {
+    const featureEnvironmentFlag =
+      key === 'allow_ev_services'
+        ? this.allowEvServicesByEnvironment
+        : key === 'allow_postpay_debt'
+          ? this.allowPostpayDebtByEnvironment
+          : null;
+    if (featureEnvironmentFlag !== null && typeof value !== 'boolean') {
+      throw new AppError(
+        400,
+        'INVALID_SETTING_VALUE',
+        'مقدار این تنظیم باید یک مقدار بولی واقعی (true/false) باشد.'
+      );
+    }
+    if (featureEnvironmentFlag === false && value === true) {
+      throw new AppError(
+        403,
+        'FEATURE_DISABLED_BY_ENVIRONMENT',
+        'فعال‌سازی این قابلیت از پیکربندی محیط سرور مسدود شده است.'
+      );
+    }
+
     const existing = this.db.get<{ key: string }>(
       'SELECT key FROM system_settings WHERE key = ?',
       key
@@ -252,6 +294,7 @@ export class AdminService {
       `SELECT COUNT(*) AS cnt FROM support_tickets WHERE status IN ('open', 'in_progress', 'escalated_to_admin')`
     );
 
+    const financialReport = this.payments.getFinancialReconciliationReport();
     return {
       operational: {
         totalRequests,
@@ -262,7 +305,10 @@ export class AdminService {
         pendingResponderReviewsCount: Number(pendingResponders?.cnt ?? 0),
         openSupportTicketsCount: Number(openTickets?.cnt ?? 0),
       },
-      financial: this.payments.getFinancialReconciliationReport().summary,
+      financial: financialReport.summary,
+      financialGateway: financialReport.gateway,
+      financialSandbox: financialReport.sandbox,
+      financialExcludedUnverified: financialReport.excludedUnverified,
       geographyReadiness: this.geography.getOperationalReadinessReport(),
     };
   }

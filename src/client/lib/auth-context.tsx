@@ -26,7 +26,12 @@ export interface PublicSystemInfo {
   devQuickLoginEnabled: boolean;
   supportHotline: string | null;
   integrations: {
-    paymentGateway: { providerName: string; isSandbox: boolean; noticeFa: string };
+    paymentGateway: {
+      providerName: string;
+      isSandbox: boolean;
+      connectionVerified: boolean;
+      noticeFa: string;
+    };
     smsProvider: { providerName: string; isSandbox: boolean };
     mapProvider: string;
   };
