@@ -72,6 +72,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   });
 
   const unreadCount = notifications.filter((n) => n.is_read === 0).length;
+  const demoMode = Boolean(systemInfo && !systemInfo.isProduction);
+  const publicOperationsEnabled = Boolean(
+    systemInfo?.isProduction && systemInfo.publicOperationsEnabled
+  );
+  const supportTelHref = systemInfo?.supportHotline?.replace(/[^+\d]/g, '');
 
   const markAsRead = async (id: number, requestId: number | null) => {
     try {
@@ -109,22 +114,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* نوار شفافیت محیط آزمایشی (در صورت فعال بودن Sandbox درگاه یا پیامک) */}
-      {systemInfo &&
-        (systemInfo.integrations.paymentGateway.isSandbox ||
-          systemInfo.integrations.smsProvider.isSandbox) && (
-          <div className="bg-amber-900 text-amber-50 text-xs py-1.5 px-4 text-center no-print">
-            <span className="font-semibold">شفافیت عملیاتی ({systemInfo.environment}): </span>
-            پوشش فعال فعلی: <strong>استان قزوین</strong> | درگاه پرداخت:{' '}
-            {systemInfo.integrations.paymentGateway.isSandbox
-              ? 'آزمایشی (Sandbox — بدون تراکنش بانکی واقعی)'
-              : 'عملیاتی'}{' '}
-            | پیامک:{' '}
-            {systemInfo.integrations.smsProvider.isSandbox
-              ? 'ثبت در صف آزمایشی (بدون ارسال مخابراتی)'
-              : 'عملیاتی'}
-          </div>
-        )}
+      {/* وضعیت بهره‌برداری همواره شفاف است؛ پیکربندی زون به‌تنهایی به معنای ناوگان/اپراتور واقعی نیست. */}
+      {systemInfo && (
+        <div
+          className={`text-xs py-2 px-4 text-center no-print ${
+            publicOperationsEnabled
+              ? 'bg-emerald-900 text-emerald-50'
+              : 'bg-amber-900 text-amber-50'
+          }`}
+          role="status"
+        >
+          <span className="font-semibold">وضعیت سامانه ({systemInfo.environment}): </span>
+          {systemInfo.isProduction
+            ? publicOperationsEnabled
+              ? 'ثبت درخواست عمومی فعال شده است؛ هر مأموریت همچنان به ظرفیت واقعی امدادگر وابسته است.'
+              : 'پیش از بهره‌برداری عمومی هستیم؛ ثبت درخواست امدادی زنده از سمت سرور غیرفعال است.'
+            : 'محیط آزمایشی/توسعه است؛ داده‌ها و حساب‌های نمایشی سرویس امدادی واقعی محسوب نمی‌شوند.'}
+          {!systemInfo.isProduction && (
+            <span>
+              {' '}| درگاه: {systemInfo.integrations.paymentGateway.isSandbox
+                ? 'Sandbox، بدون تراکنش بانکی'
+                : systemInfo.integrations.paymentGateway.providerName}
+              {' '}| پیامک: {systemInfo.integrations.smsProvider.isSandbox
+                ? 'صف آزمایشی، بدون ارسال مخابراتی'
+                : systemInfo.integrations.smsProvider.providerName}
+            </span>
+          )}
+          {systemInfo.integrations.mapProvider === 'vector_qazvin' && (
+            <span> | نقشه پس‌زمینه شماتیک است و مسیریابی/موقعیت دقیق ارائه نمی‌کند.</span>
+          )}
+        </div>
+      )}
 
       {/* هدر اصلی */}
       <header className="sticky top-0 z-40 bg-slate-900 text-white shadow-md no-print">
@@ -140,7 +160,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="text-[11px] text-amber-300 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
-                  <span>امداد خودرو استان قزوین</span>
+                  <span>نرم‌افزار پایلوت استان قزوین</span>
                 </div>
               </div>
             </Link>
@@ -172,12 +192,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
             >
               بیزینس‌پلن اسلایدی
             </a>
-            <Link
-              to="/request/new"
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition shadow-sm"
-            >
-              ثبت فوری درخواست امداد
-            </Link>
+            {publicOperationsEnabled || demoMode ? (
+              <Link
+                to="/request/new"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition shadow-sm"
+              >
+                {demoMode ? 'دموی ثبت درخواست' : 'ثبت درخواست امداد'}
+              </Link>
+            ) : (
+              <span
+                title="ثبت درخواست عمومی تا آماده‌سازی پایلوت غیرفعال است."
+                className="bg-slate-700 text-slate-300 font-bold px-3.5 py-1.5 rounded-lg cursor-not-allowed"
+              >
+                ثبت درخواست فعلاً غیرفعال
+              </span>
+            )}
             <Link
               to="/support"
               className={`hover:text-amber-400 transition flex items-center gap-1 ${location.pathname === '/support' ? 'text-amber-400' : 'text-slate-200'}`}
@@ -202,13 +231,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* ابزارهای سمت چپ هدر */}
           <div className="flex items-center gap-2">
-            <a
-              href={`tel:${systemInfo?.supportHotline || '02833330000'}`}
-              className="hidden lg:inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3 py-1.5 rounded-lg transition"
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>{systemInfo?.supportHotline || '۰۲۸-۳۳۳۳۰۰۰۰'}</span>
-            </a>
+            {supportTelHref && (
+              <a
+                href={`tel:${supportTelHref}`}
+                className="hidden lg:inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3 py-1.5 rounded-lg transition"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>{systemInfo?.supportHotline}</span>
+              </a>
+            )}
 
             {user ? (
               <div className="flex items-center gap-2 relative">
@@ -307,12 +338,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* منوی موبایل */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-slate-900 border-t border-slate-800 px-4 py-4 space-y-2.5 text-sm">
-            <Link
-              to="/request/new"
-              className="block w-full text-center bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg"
-            >
-              ثبت فوری درخواست امداد
-            </Link>
+            {publicOperationsEnabled || demoMode ? (
+              <Link
+                to="/request/new"
+                className="block w-full text-center bg-amber-500 text-slate-950 font-bold py-2.5 rounded-lg"
+              >
+                {demoMode ? 'دموی ثبت درخواست' : 'ثبت درخواست امداد'}
+              </Link>
+            ) : (
+              <div className="block w-full text-center bg-slate-800 text-slate-400 font-bold py-2.5 rounded-lg">
+                ثبت درخواست عمومی فعلاً غیرفعال است
+              </div>
+            )}
             <Link to="/" className="block py-2 text-slate-200">
               صفحه اصلی
             </Link>
@@ -355,8 +392,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span>سامانه جامع «اورژانس خودرو»</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              پلتفرم تخصصی ارتباط مشتریان با امدادگران احراز صلاحیت‌شده در استان قزوین، با
-              معماری مقیاس‌پذیر جهت توسعه کنترل‌شده به سایر استان‌های ایران.
+              محصول نرم‌افزاری ثبت و پیگیری خدمات امداد خودرو با محدوده جغرافیایی پیکربندی‌شده در قزوین. نمایش وضعیت فعال زون، به‌تنهایی به معنای وجود ناوگان یا تضمین زمان اعزام نیست.
             </p>
             <p className="text-[11px] text-slate-500 mt-2">
               * عنوان انگلیسی پیشنهادی «Auto Emergency» صرفاً پیشنهادی کاری است و منوط به
@@ -368,13 +404,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <h3 className="text-white font-bold mb-2.5">دسترسی سریع</h3>
             <ul className="space-y-1.5 text-xs text-slate-400">
               <li>
-                <Link to="/request/new" className="hover:text-amber-400">
-                  ثبت درخواست اضطراری امداد
-                </Link>
+                {publicOperationsEnabled || demoMode ? (
+                  <Link to="/request/new" className="hover:text-amber-400">
+                    {demoMode ? 'دموی ثبت درخواست' : 'ثبت درخواست امداد'}
+                  </Link>
+                ) : (
+                  <span>ثبت درخواست عمومی فعلاً غیرفعال است</span>
+                )}
               </li>
               <li>
                 <Link to="/services" className="hover:text-amber-400">
-                  فهرست ۱۵ خدمت و تعرفه‌های پایه (تومان)
+                  فهرست ۱۵ خدمت و فرضیه‌های نرخ پایه (تومان)
                 </Link>
               </li>
               <li>
@@ -401,15 +441,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div>
-            <h3 className="text-white font-bold mb-2.5">مرکز عملیات استان قزوین</h3>
+            <h3 className="text-white font-bold mb-2.5">محدوده جغرافیایی پایلوت</h3>
             <p className="text-xs text-slate-400 mb-2">
-              مناطق فعال فعلی: شهر قزوین، الوند و شهر صنعتی البرز، تاکستان، آبیک،
-              بوئین‌زهرا و محورهای آزادراهی استحفاظی قزوین.
+              زون‌های شهر قزوین، الوند، تاکستان، آبیک، بوئین‌زهرا و محورهای مرتبط در کد سامانه پیکربندی شده‌اند؛ وجود واحد امدادی در محل باید جداگانه تأیید شود.
             </p>
-            <div className="inline-flex items-center gap-2 bg-slate-800 px-3.5 py-2 rounded-lg text-amber-300 font-bold text-xs">
-              <PhoneCall className="w-4 h-4" />
-              <span>تلفن پشتیبانی ۲۴ ساعته: {systemInfo?.supportHotline || '۰۲۸-۳۳۳۳۰۰۰۰'}</span>
-            </div>
+            {supportTelHref ? (
+              <a
+                href={`tel:${supportTelHref}`}
+                className="inline-flex items-center gap-2 bg-slate-800 px-3.5 py-2 rounded-lg text-amber-300 font-bold text-xs"
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>شماره تماس پشتیبانی: {systemInfo?.supportHotline}</span>
+              </a>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                شماره تماس عمومی تا زمان تأیید و ثبت شماره واقعی اعلام نمی‌شود.
+              </p>
+            )}
           </div>
         </div>
       </footer>

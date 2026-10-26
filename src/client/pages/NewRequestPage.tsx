@@ -42,7 +42,12 @@ interface CatalogServiceItem {
 }
 
 export function NewRequestPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, systemInfo } = useAuth();
+  const requestSubmissionEnabled = Boolean(
+    systemInfo &&
+      (!systemInfo.isProduction || systemInfo.publicOperationsEnabled)
+  );
+  const demoMode = Boolean(systemInfo && !systemInfo.isProduction);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedServiceId = Number(searchParams.get('serviceId') || 0);
@@ -61,10 +66,10 @@ export function NewRequestPage() {
     category: 'domestic' as VehicleCategory,
   });
 
+  // نقطه مرکز نقشه فقط برای نمای اولیه است و تا انتخاب صریح کاربر، موقعیت مبدأ محسوب نمی‌شود.
   const [origin, setOrigin] = useState<GeoPoint>({ lat: 36.2688, lng: 50.0041 });
-  const [originAddress, setOriginAddress] = useState(
-    'قزوین، خیابان خیام جنوبی، نزدیک سبزه‌میدان'
-  );
+  const [originSelected, setOriginSelected] = useState(false);
+  const [originAddress, setOriginAddress] = useState('');
   const [destination, setDestination] = useState<GeoPoint | null>(null);
   const [destinationAddress, setDestinationAddress] = useState('');
 
@@ -132,6 +137,11 @@ export function NewRequestPage() {
       setQuoteBreakdown(null);
       return;
     }
+    if (!originSelected) {
+      setQuoteBreakdown(null);
+      setQuoteError('برای دریافت برآورد، ابتدا موقعیت واقعی خودرو را با GPS یا نقشه انتخاب کنید.');
+      return;
+    }
     if (selectedService.requiresDestination && !destination) {
       setQuoteBreakdown(null);
       setQuoteError('برای محاسبه برآورد خدمات حمل/یدک‌کش، مقصد حمل را روی نقشه انتخاب کنید.');
@@ -177,6 +187,7 @@ export function NewRequestPage() {
   }, [
     selectedService?.id,
     selectedVehicle?.id,
+    originSelected,
     origin.lat,
     origin.lng,
     destination?.lat,
@@ -232,6 +243,22 @@ export function NewRequestPage() {
 
   const handleSubmitRequest = async (submitImmediately: boolean) => {
     setSubmitError(null);
+    if (!requestSubmissionEnabled) {
+      setSubmitError(
+        systemInfo?.isProduction
+          ? 'ثبت درخواست عمومی هنوز فعال نشده است؛ این نسخه برای اعزام امدادی واقعی آماده اعلام نشده.'
+          : 'وضعیت محیط سامانه مشخص نیست؛ تا بازیابی اتصال از ارسال درخواست خودداری کنید.'
+      );
+      return;
+    }
+    if (!originSelected) {
+      setSubmitError('پیش از ارسال، موقعیت واقعی خودرو را با GPS، انتخاب روی نقشه یا مختصات دستی مشخص کنید.');
+      return;
+    }
+    if (originAddress.trim().length < 5) {
+      setSubmitError('نشانی دقیق محل توقف خودرو را وارد کنید.');
+      return;
+    }
     if (!selectedVehicleId) {
       setSubmitError('لطفاً ابتدا خودروی خود را انتخاب یا ثبت کنید.');
       return;
@@ -349,6 +376,16 @@ export function NewRequestPage() {
             انجام می‌شود.
           </p>
         </div>
+
+        {(!requestSubmissionEnabled || demoMode) && (
+          <div className="bg-amber-50 border border-amber-300 text-amber-950 p-4 rounded-xl text-xs font-bold" role="status">
+            {systemInfo?.isProduction
+              ? 'ثبت درخواست عمومی در این سرور غیرفعال است؛ این فرم را برای امداد فوری استفاده نکنید.'
+              : systemInfo
+                ? 'محیط آزمایشی است؛ درخواست‌ها و حساب‌های seed شده اعزام، پرداخت یا پیامک واقعی را تضمین نمی‌کنند.'
+                : 'وضعیت بهره‌برداری سرور دریافت نشد؛ ارسال درخواست تا روشن‌شدن وضعیت غیرفعال است.'}
+          </div>
+        )}
 
         {submitError && (
           <div className="bg-rose-50 border border-rose-300 text-rose-900 p-4 rounded-xl text-xs font-bold">
@@ -514,9 +551,12 @@ export function NewRequestPage() {
           </h2>
           <GeoMapPicker
             origin={origin}
+            originSelected={originSelected}
+            showQuickPresets={demoMode}
             originAddress={originAddress}
             onOriginChange={(pt, addr) => {
               setOrigin(pt);
+              setOriginSelected(true);
               if (addr) setOriginAddress(addr);
             }}
             onOriginAddressChange={setOriginAddress}
@@ -553,13 +593,13 @@ export function NewRequestPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                کد تخفیف (اختیاری — نمونه فعال: QAZVIN1405)
+                کد تخفیف (اختیاری{demoMode ? ' — نمونه محیط آزمایشی: QAZVIN1405' : ' — فقط در صورت دریافت کد معتبر'})
               </label>
               <input
                 type="text"
                 value={discountCode}
                 onChange={(e) => setDiscountCode(e.target.value)}
-                placeholder="QAZVIN1405"
+                placeholder={demoMode ? 'QAZVIN1405' : 'کد دریافت‌شده'}
                 className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs dir-ltr text-left uppercase"
               />
             </div>
@@ -689,21 +729,25 @@ export function NewRequestPage() {
           <div className="space-y-2 pt-2">
             <button
               type="button"
-              disabled={submitting || Boolean(quoteError)}
+              disabled={submitting || Boolean(quoteError) || !requestSubmissionEnabled}
               onClick={() => void handleSubmitRequest(true)}
               className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3.5 rounded-xl text-sm shadow-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
                 {submitting
-                  ? 'در حال ثبت و جستجوی امدادگر...'
-                  : 'تأیید و ثبت نهایی درخواست امداد'}
+                  ? 'در حال ثبت درخواست...'
+                  : !requestSubmissionEnabled
+                    ? 'ثبت درخواست عمومی غیرفعال است'
+                    : demoMode
+                      ? 'ثبت درخواست در محیط آزمایشی'
+                      : 'تأیید و ثبت نهایی درخواست امداد'}
               </span>
             </button>
 
             <button
               type="button"
-              disabled={submitting || Boolean(quoteError)}
+              disabled={submitting || Boolean(quoteError) || !requestSubmissionEnabled}
               onClick={() => void handleSubmitRequest(false)}
               className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition disabled:opacity-50"
             >

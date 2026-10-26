@@ -3,11 +3,12 @@
 ## ۱. پیش‌نیازهای استقرار عملیاتی (Production)
 - **نسخه Node.js:** نسخه `22.5.0` یا بالاتر (به دلیل استفاده از ماژول تراکنشی بومی `node:sqlite` بدون وابستگی به کامپایل C++ خارجی).
 - **فایل پیکربندی محیطی:** کپی `.env.example` به `.env` و تنظیم مقادیر واقعی (هیچ کلید خصوصی نباید در Git ثبت شود):
-  - `APP_ENV=production`
+  - `APP_ENV=production` و `NODE_ENV=production`؛ مقدار `NODE_ENV=production` حتی اگر `APP_ENV` اشتباه `development` باشد، seed را غیرفعال و قواعد Production را اعمال می‌کند.
   - `SESSION_SECRET`: رشته تصادفی حداقل ۳۲ کاراکتری (تولید با `openssl rand -hex 32`)
-  - `FEATURE_ENABLE_DEV_SEED=false`
-  - `PAYMENT_PROVIDER=zarinpal` و `ZARINPAL_MERCHANT_ID=<کد ۳۶ کاراکتری شاپرکی>` و `ZARINPAL_SANDBOX=false`
-  - `SMS_PROVIDER=kavenegar` و `KAVENEGAR_API_KEY=<کلید وب‌سرویس>` و `SMS_SENDER_NUMBER=<خط خدماتی>`
+  - `FEATURE_ENABLE_DEV_SEED=false` (در Production سرور آن را مستقل از مقدار ورودی نیز خاموش می‌کند)
+  - `PAYMENT_PROVIDER=zarinpal`، `ENABLE_SANDBOX_GATEWAY=false`، شناسه واقعی `ZARINPAL_MERCHANT_ID` و `ZARINPAL_SANDBOX=false`؛ هر نوع درگاه آزمایشی در Production باعث توقف راه‌اندازی می‌شود.
+  - `SMS_PROVIDER=kavenegar`، `KAVENEGAR_API_KEY=<کلید وب‌سرویس واقعی>` و `SMS_SENDER_NUMBER=<خط خدماتی واقعی>`؛ صندوق آزمایشی پیامک در Production ممنوع است.
+  - `ENABLE_PUBLIC_OPERATIONS=false` تا زمان اخذ مجوزهای لازم، تأیید نرخ‌نامه، تأمین ناوگان و خط تماس معتبر؛ فقط پس از تست پذیرش و تأیید صریح مالک محصول آن را `true` کنید. تا آن زمان API ثبت درخواست با `503 PUBLIC_OPERATIONS_DISABLED` پاسخ می‌دهد.
   - `DATABASE_PATH=/var/lib/auto-emergency/emscar.sqlite` (مسیر دیسک پایدار SSD با مجوز محدود `0600`)
   - `PRIVATE_STORAGE_DIR=/var/lib/auto-emergency/private_uploads`
   - `DATABASE_BACKUP_DIR=/var/backups/auto-emergency`

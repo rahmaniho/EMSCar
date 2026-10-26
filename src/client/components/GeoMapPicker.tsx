@@ -28,6 +28,8 @@ interface CoverageCheckResponse {
 
 interface GeoMapPickerProps {
   origin: GeoPoint;
+  originSelected: boolean;
+  showQuickPresets: boolean;
   originAddress: string;
   onOriginChange: (point: GeoPoint, suggestedAddress?: string) => void;
   onOriginAddressChange: (address: string) => void;
@@ -53,6 +55,12 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
 
   useEffect(() => {
     let active = true;
+    if (!props.originSelected) {
+      setCoverage(null);
+      return () => {
+        active = false;
+      };
+    }
     const timer = setTimeout(async () => {
       try {
         const res = await apiFetch<CoverageCheckResponse>(
@@ -76,7 +84,7 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
       active = false;
       clearTimeout(timer);
     };
-  }, [props.origin.lat, props.origin.lng]);
+  }, [props.originSelected, props.origin.lat, props.origin.lng]);
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mapRef.current) return;
@@ -177,29 +185,31 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
         </div>
       )}
 
-      {/* نقاط سریع استان قزوین + نقاط مرزی جهت آزمون پوشش */}
-      <div className="flex flex-wrap gap-1.5">
-        {LOCATION_PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={() => {
-              if (pickMode === 'destination' && props.requiresDestination) {
-                props.onDestinationChange(preset.point, preset.addressFa);
-              } else {
-                props.onOriginChange(preset.point, preset.addressFa);
-              }
-            }}
-            className={`text-[11px] px-2.5 py-1 rounded-full border transition ${
-              preset.isExpectedActive
-                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-200'
-                : 'bg-slate-100 hover:bg-rose-50 text-slate-600 border-slate-300'
-            }`}
-          >
-            {preset.labelFa}
-          </button>
-        ))}
-      </div>
+      {/* مکان‌های نمونه فقط در محیط‌های توسعه/آزمایش نمایش داده می‌شوند. */}
+      {props.showQuickPresets && (
+        <div className="flex flex-wrap gap-1.5">
+          {LOCATION_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => {
+                if (pickMode === 'destination' && props.requiresDestination) {
+                  props.onDestinationChange(preset.point, preset.addressFa);
+                } else {
+                  props.onOriginChange(preset.point, preset.addressFa);
+                }
+              }}
+              className={`text-[11px] px-2.5 py-1 rounded-full border transition ${
+                preset.isExpectedActive
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-200'
+                  : 'bg-slate-100 hover:bg-rose-50 text-slate-600 border-slate-300'
+              }`}
+            >
+              {preset.labelFa}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* بوم نقشه برداری تعاملی مستقل از سرویس خارجی */}
       <div
@@ -255,7 +265,7 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           />
 
           {/* خط مسیر حمل در صورت انتخاب مقصد */}
-          {destPos && (
+          {destPos && props.originSelected && (
             <line
               x1={originPos.x}
               y1={originPos.y}
@@ -294,15 +304,17 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           );
         })}
 
-        {/* نشانگر مبدأ */}
-        <div
-          style={{ left: `${originPos.x}%`, top: `${originPos.y}%` }}
-          className="absolute -translate-x-1/2 -translate-y-full pointer-events-none transition-all duration-150"
-        >
-          <div className="bg-amber-500 text-slate-950 p-1.5 rounded-full shadow-lg border-2 border-white">
-            <MapPin className="w-5 h-5" />
+        {/* نشانگر مبدأ فقط پس از انتخاب صریح مکان نمایش داده می‌شود. */}
+        {props.originSelected && (
+          <div
+            style={{ left: `${originPos.x}%`, top: `${originPos.y}%` }}
+            className="absolute -translate-x-1/2 -translate-y-full pointer-events-none transition-all duration-150"
+          >
+            <div className="bg-amber-500 text-slate-950 p-1.5 rounded-full shadow-lg border-2 border-white">
+              <MapPin className="w-5 h-5" />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* نشانگر مقصد حمل */}
         {destPos && (
@@ -316,8 +328,8 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           </div>
         )}
 
-        <div className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[11px] px-2.5 py-1 rounded-lg pointer-events-none">
-          برای جابه‌جایی نشانگر {pickMode === 'destination' ? 'مقصد' : 'مبدأ'} روی نقشه کلیک کنید
+        <div className="absolute bottom-2 right-2 bg-slate-900/85 text-white text-[10px] sm:text-[11px] px-2.5 py-1 rounded-lg pointer-events-none max-w-[85%]">
+          نقشه شماتیک است، مسیریاب نیست. برای مبدأ واقعی از GPS یا انتخاب صریح نقطه استفاده کنید؛ {pickMode === 'destination' ? 'مقصد' : 'مبدأ'} تا انتخاب شما ثبت نمی‌شود.
         </div>
       </div>
 
@@ -338,7 +350,7 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           <div>
             <div className="font-bold">{coverage.messageFa}</div>
             <div className="text-[11px] opacity-80 mt-0.5">
-              مختصات ثبت‌شده: {props.origin.lat.toFixed(4)}, {props.origin.lng.toFixed(4)}
+              مختصات انتخاب‌شده: {props.origin.lat.toFixed(4)}, {props.origin.lng.toFixed(4)}. این بررسی فقط وضعیت زون نرم‌افزاری را نشان می‌دهد و وجود امدادگر یا زمان پاسخ را تضمین نمی‌کند.
             </div>
           </div>
         </div>
@@ -367,13 +379,15 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           <input
             type="number"
             step="0.0001"
-            value={props.origin.lat}
-            onChange={(e) =>
+            value={props.originSelected ? props.origin.lat : ''}
+            placeholder="ابتدا موقعیت را انتخاب کنید"
+            onChange={(e) => {
+              if (!e.target.value) return;
               props.onOriginChange({
                 lat: Number(e.target.value),
                 lng: props.origin.lng,
-              })
-            }
+              });
+            }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dir-ltr text-left"
           />
         </div>
@@ -385,13 +399,15 @@ export function GeoMapPicker(props: GeoMapPickerProps) {
           <input
             type="number"
             step="0.0001"
-            value={props.origin.lng}
-            onChange={(e) =>
+            value={props.originSelected ? props.origin.lng : ''}
+            placeholder="ابتدا موقعیت را انتخاب کنید"
+            onChange={(e) => {
+              if (!e.target.value) return;
               props.onOriginChange({
                 lat: props.origin.lat,
                 lng: Number(e.target.value),
-              })
-            }
+              });
+            }}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs dir-ltr text-left"
           />
         </div>

@@ -22,8 +22,9 @@ export interface AuthUser {
 export interface PublicSystemInfo {
   environment: string;
   isProduction: boolean;
+  publicOperationsEnabled: boolean;
   devQuickLoginEnabled: boolean;
-  supportHotline: string;
+  supportHotline: string | null;
   integrations: {
     paymentGateway: { providerName: string; isSandbox: boolean; noticeFa: string };
     smsProvider: { providerName: string; isSandbox: boolean };

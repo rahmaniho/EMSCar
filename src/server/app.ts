@@ -202,13 +202,28 @@ export function createAppContext(options?: CreateAppOptions) {
     const hotlineRow = db.get<{ value_json: string }>(
       `SELECT value_json FROM system_settings WHERE key = 'support_hotline'`
     );
+    let hotlineCandidate: unknown = null;
+    try {
+      hotlineCandidate = hotlineRow ? JSON.parse(hotlineRow.value_json) : null;
+    } catch {
+      // تنظیم خراب یا نامعتبر هرگز به‌عنوان شماره عمومی منتشر نمی‌شود.
+    }
+    const supportHotline =
+      typeof hotlineCandidate === 'string' &&
+      /^[+0-9()\s-]{7,24}$/.test(hotlineCandidate) &&
+      hotlineCandidate.replace(/\D/g, '').length >= 7 &&
+      hotlineCandidate.replace(/\D/g, '') !== '02833330000'
+        ? hotlineCandidate.trim()
+        : null;
     res.json({
       ok: true,
       brand: BRAND_IDENTITY,
       environment: config.APP_ENV,
       isProduction: config.isProduction,
+      publicOperationsEnabled:
+        config.isProduction && config.ENABLE_PUBLIC_OPERATIONS,
       devQuickLoginEnabled: !config.isProduction && config.FEATURE_ENABLE_DEV_SEED,
-      supportHotline: hotlineRow ? JSON.parse(hotlineRow.value_json) : '028-33330000',
+      supportHotline,
       integrations: {
         paymentGateway: paymentsService.getGatewayStatus(),
         smsProvider: notificationsService.getProviderInfo(),
@@ -245,6 +260,20 @@ export function createAppContext(options?: CreateAppOptions) {
     '/api/notifications',
     createNotificationsRouter({ notificationsService, auditService })
   );
+  // قفل سمت‌سرور: تا تأیید صریح راه‌اندازی، هیچ درخواست امدادی عمومی در Production ساخته نمی‌شود.
+  app.post('/api/requests', (_req, _res, next) => {
+    if (config.isProduction && !config.ENABLE_PUBLIC_OPERATIONS) {
+      next(
+        new AppError(
+          503,
+          'PUBLIC_OPERATIONS_DISABLED',
+          'ثبت درخواست عمومی هنوز فعال نشده است؛ سامانه تا تکمیل مجوزها و آمادگی ناوگان در مرحله پیش از بهره‌برداری است.'
+        )
+      );
+      return;
+    }
+    next();
+  });
   app.use(
     '/api/requests',
     createRequestsRouter({ requestsService, dispatchService, auditService })

@@ -9,6 +9,7 @@ import {
 
 export function AuthPage() {
   const { login, register, systemInfo } = useAuth();
+  const supportTelHref = systemInfo?.supportHotline?.replace(/[^+\d]/g, '');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialRole =
@@ -378,9 +379,18 @@ export function AuthPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-6 text-xs text-slate-600 space-y-2">
             <h2 className="font-bold text-sm text-slate-900">راهنمای امنیتی ورود</h2>
             <p>
-              لطفاً شماره موبایل ۱۱ رقمی ثبت‌شده خود و رمز عبور را وارد نمایید. در صورت
-              نیاز به امداد فوری تلفنی در استان قزوین با مرکز پیام تماس بگیرید.
+              لطفاً شماره موبایل ۱۱ رقمی ثبت‌شده خود و رمز عبور را وارد نمایید. این نسخه تا زمان فعال‌سازی بهره‌برداری عمومی، خط امداد اضطراری نیست.
             </p>
+            {supportTelHref ? (
+              <p className="font-bold">
+                شماره تماس پشتیبانی ثبت‌شده:{' '}
+                <a className="underline" href={`tel:${supportTelHref}`}>
+                  {systemInfo?.supportHotline}
+                </a>
+              </p>
+            ) : (
+              <p>شماره تماس پشتیبانی عمومی هنوز تأیید و پیکربندی نشده است.</p>
+            )}
           </div>
         )}
       </div>
