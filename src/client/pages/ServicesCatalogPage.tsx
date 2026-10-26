@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Wrench, ShieldAlert, Search } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
+import { useAuth } from '../lib/auth-context.tsx';
 import { formatToman } from '../lib/format.ts';
 import {
   SERVICE_CATEGORIES,
@@ -31,6 +32,12 @@ interface CatalogItem {
 }
 
 export function ServicesCatalogPage() {
+  const { systemInfo } = useAuth();
+  const demoMode = Boolean(systemInfo && !systemInfo.isProduction);
+  const publicOperationsEnabled = Boolean(
+    systemInfo?.isProduction && systemInfo.publicOperationsEnabled
+  );
+  const canSubmitRequest = demoMode || publicOperationsEnabled;
   const [services, setServices] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -64,20 +71,25 @@ export function ServicesCatalogPage() {
       <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold">
-            کاتالوگ رسمی خدمات و تعرفه‌های «اورژانس خودرو»
+            کاتالوگ خدمات و چارچوب نرخ‌گذاری اولیه «اورژانس خودرو»
           </h1>
           <p className="text-xs sm:text-sm text-slate-300">
-            تمامی مبالغ به تومان درج شده‌اند. پیش از تأیید نهایی درخواست، برآورد دقیق بر
-            اساس نوع خودرو و موقعیت شما در استان قزوین محاسبه و نمایش داده می‌شود.
+            همه ارقام تومان و فرضیه نرخ پایه در کاتالوگ آزمایشی‌اند؛ نرخ مصوب صنفی یا پیشنهاد تجاری قطعی نیستند و پیش از بهره‌برداری باید بررسی و تأیید شوند.
           </p>
         </div>
-        <Link
-          to="/request/new"
-          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>ثبت درخواست امداد</span>
-        </Link>
+        {canSubmitRequest ? (
+          <Link
+            to="/request/new"
+            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            <span>{demoMode ? 'دموی ثبت درخواست' : 'ثبت درخواست امداد'}</span>
+          </Link>
+        ) : (
+          <span className="bg-slate-700 text-slate-300 font-bold px-5 py-3 rounded-xl text-xs">
+            ثبت درخواست عمومی غیرفعال است
+          </span>
+        )}
       </div>
 
       {/* فیلتر دسته و جستجو */}
@@ -191,7 +203,7 @@ export function ServicesCatalogPage() {
               <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="text-xs text-slate-500">
-                    تعرفه پایه (شامل {s.includedFreeKm.toLocaleString('fa-IR')} کیلومتر اعزام رایگان):
+                    فرضیه نرخ پایه (شامل {s.includedFreeKm.toLocaleString('fa-IR')} کیلومتر اعزام در مدل):
                   </div>
                   <div className="text-lg font-black text-slate-900">
                     {formatToman(s.basePriceToman)}
@@ -203,12 +215,18 @@ export function ServicesCatalogPage() {
                   )}
                 </div>
 
-                <Link
-                  to={`/request/new?serviceId=${s.id}`}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition"
-                >
-                  انتخاب و ثبت درخواست
-                </Link>
+                {canSubmitRequest ? (
+                  <Link
+                    to={`/request/new?serviceId=${s.id}`}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition"
+                  >
+                    {demoMode ? 'انتخاب در دموی درخواست' : 'انتخاب خدمت'}
+                  </Link>
+                ) : (
+                  <span className="bg-slate-100 text-slate-500 text-[11px] font-bold px-4 py-2.5 rounded-xl">
+                    ثبت سفارش غیرفعال
+                  </span>
+                )}
               </div>
             </div>
           ))}

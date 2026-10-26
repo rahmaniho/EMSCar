@@ -53,6 +53,8 @@ const envSchema = z.object({
   FEATURE_ENABLE_DEV_SEED: booleanFromEnv(true),
   FEATURE_ALLOW_EV_SERVICES: booleanFromEnv(true),
   FEATURE_ALLOW_POSTPAY_DEBT: booleanFromEnv(false),
+  // فعال‌سازی ثبت درخواست واقعی در Production فقط پس از آمادگی عملیاتی و تأیید مالک محصول
+  ENABLE_PUBLIC_OPERATIONS: booleanFromEnv(false),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {
@@ -67,15 +69,16 @@ let cachedDevSecret: string | null = null;
 
 export function loadConfig(overrides?: Partial<Record<string, string>>): AppConfig {
   const raw = { ...process.env, ...overrides };
-  if (raw.NODE_ENV === 'production' && !raw.APP_ENV) {
+  // NODE_ENV=production همیشه بر APP_ENV متناقض اولویت دارد؛ مانع فعال‌شدن seed آزمایشی در Production.
+  if (raw.NODE_ENV === 'production' || raw.APP_ENV === 'production') {
     raw.APP_ENV = 'production';
-  }
-  if (raw.VITEST && !raw.APP_ENV) {
+    raw.NODE_ENV = 'production';
+  } else if (raw.VITEST && !raw.APP_ENV) {
     raw.APP_ENV = 'test';
   }
 
   const parsed = envSchema.parse(raw);
-  const isProduction = parsed.APP_ENV === 'production';
+  const isProduction = parsed.APP_ENV === 'production' || parsed.NODE_ENV === 'production';
   const isTest = parsed.APP_ENV === 'test';
 
   let sessionSecret = parsed.SESSION_SECRET;
@@ -89,9 +92,25 @@ export function loadConfig(overrides?: Partial<Record<string, string>>): AppConf
         'خطای بحرانی امنیتی: در محیط Production متغیر SESSION_SECRET باید یک رشته تصادفی حداقل ۳۲ کاراکتری معتبر باشد.'
       );
     }
-    if (parsed.PAYMENT_PROVIDER === 'sandbox' && !parsed.ENABLE_SANDBOX_GATEWAY) {
+    if (
+      parsed.PAYMENT_PROVIDER !== 'zarinpal' ||
+      parsed.ENABLE_SANDBOX_GATEWAY ||
+      parsed.ZARINPAL_SANDBOX
+    ) {
       throw new Error(
-        'در محیط Production استفاده از درگاه پرداخت آزمایشی مجاز نیست.'
+        'در محیط Production فقط درگاه زَرین‌پال عملیاتی مجاز است؛ Sandbox باید کاملاً غیرفعال باشد.'
+      );
+    }
+    if (parsed.ZARINPAL_MERCHANT_ID.trim().length < 32) {
+      throw new Error('در محیط Production شناسه پذیرنده واقعی ZARINPAL_MERCHANT_ID الزامی است.');
+    }
+    if (
+      parsed.SMS_PROVIDER !== 'kavenegar' ||
+      !parsed.KAVENEGAR_API_KEY.trim() ||
+      !parsed.SMS_SENDER_NUMBER.trim()
+    ) {
+      throw new Error(
+        'در محیط Production استفاده از صندوق پیامک آزمایشی مجاز نیست؛ کلید کاوه‌نگار و خط خدماتی باید تنظیم شوند.'
       );
     }
   } else if (!sessionSecret || sessionSecret.includes('CHANGE_ME')) {

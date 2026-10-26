@@ -11,6 +11,9 @@ export function seedDevelopmentData(
     );
   }
 
+  // تخفیف QAZVIN1405 یک داده نمایشی است؛ فقط در seed محیط توسعه فعال می‌شود.
+  db.run("UPDATE discount_codes SET is_active = 1 WHERE code = 'QAZVIN1405'");
+
   const existingAdmin = db.get<{ id: number }>(
     'SELECT id FROM users WHERE phone = ?',
     '09120000001'

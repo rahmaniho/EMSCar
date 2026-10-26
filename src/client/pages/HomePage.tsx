@@ -71,6 +71,12 @@ export function HomePage() {
   const qazvinActiveZones = zones.filter(
     (z) => qazvin && z.provinceId === qazvin.id && z.status === 'active'
   );
+  const demoMode = Boolean(systemInfo && !systemInfo.isProduction);
+  const publicOperationsEnabled = Boolean(
+    systemInfo?.isProduction && systemInfo.publicOperationsEnabled
+  );
+  const canSubmitRequest = demoMode || publicOperationsEnabled;
+  const supportTelHref = systemInfo?.supportHotline?.replace(/[^+\d]/g, '');
 
   return (
     <div>
@@ -78,38 +84,68 @@ export function HomePage() {
       <section className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 text-white py-12 sm:py-16 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-5">
-            <div className="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3.5 py-1.5 rounded-full text-xs font-bold">
+            <div
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
+                publicOperationsEnabled
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              }`}
+            >
               <MapPin className="w-3.5 h-3.5" />
-              <span>پوشش عملیاتی فعال: سراسر استان قزوین و محورهای آزادراهی</span>
+              <span>
+                {publicOperationsEnabled
+                  ? 'ثبت درخواست عمومی فعال است؛ پذیرش هر مأموریت به ظرفیت واقعی امدادگر بستگی دارد.'
+                  : demoMode
+                    ? 'محیط آزمایشی نرم‌افزار — این نسخه اعزام امدادی واقعی تضمین نمی‌کند.'
+                    : 'پیش از بهره‌برداری عمومی — ثبت درخواست امدادی زنده غیرفعال است.'}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight">
-              امداد خودروی مطمئن و شفاف با{' '}
+              پلتفرم نرم‌افزاری خدمات امداد خودرو،{' '}
               <span className="text-amber-400">اورژانس خودرو</span>
             </h1>
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
-              در شرایط توقف یا خرابی خودرو تنها نیستید. اعزام نزدیک‌ترین امدادگر دارای
-              مدارک تأییدشده، محاسبه رسمی هزینه به تومان پیش از ثبت نهایی و پیگیری زنده
-              مأموریت تا صدور فاکتور رسمی.
+              {publicOperationsEnabled
+                ? 'ثبت عمومی فعال است؛ پذیرش هر درخواست، پوشش لحظه‌ای و زمان رسیدن فقط پس از تأیید ظرفیت واقعی امدادگر مشخص می‌شود.'
+                : 'این محصول در مرحله پیش از بهره‌برداری عمومی است؛ تعرفه‌های نمایشی اولیه‌اند و این وب‌سایت خط امداد اضطراری نیست. وضعیت زون جغرافیایی وجود ناوگان یا زمان رسیدن را تضمین نمی‌کند.'}
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                to="/request/new"
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-6 py-3.5 rounded-xl shadow-lg flex items-center gap-2 text-base transition"
-              >
-                <ShieldAlert className="w-5 h-5" />
-                <span>ثبت فوری درخواست امداد</span>
-              </Link>
+              {canSubmitRequest ? (
+                <Link
+                  to="/request/new"
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-6 py-3.5 rounded-xl shadow-lg flex items-center gap-2 text-base transition"
+                >
+                  <ShieldAlert className="w-5 h-5" />
+                  <span>{demoMode ? 'اجرای دموی ثبت درخواست' : 'ثبت درخواست امداد'}</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="بهره‌برداری عمومی هنوز فعال نشده است."
+                  className="bg-slate-600 text-slate-200 font-extrabold px-6 py-3.5 rounded-xl flex items-center gap-2 text-base cursor-not-allowed"
+                >
+                  <ShieldAlert className="w-5 h-5" />
+                  <span>ثبت درخواست عمومی فعلاً غیرفعال است</span>
+                </button>
+              )}
 
-              <a
-                href={`tel:${systemInfo?.supportHotline || '02833330000'}`}
-                className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold px-5 py-3.5 rounded-xl flex items-center gap-2 text-sm transition"
-              >
-                <PhoneCall className="w-4 h-4 text-amber-400" />
-                <span>مرکز پیام قزوین: {systemInfo?.supportHotline || '۰۲۸-۳۳۳۳۰۰۰۰'}</span>
-              </a>
+              {supportTelHref ? (
+                <a
+                  href={`tel:${supportTelHref}`}
+                  className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold px-5 py-3.5 rounded-xl flex items-center gap-2 text-sm transition"
+                >
+                  <PhoneCall className="w-4 h-4 text-amber-400" />
+                  <span>شماره تماس پشتیبانی: {systemInfo?.supportHotline}</span>
+                </a>
+              ) : (
+                <div className="bg-slate-800 border border-slate-700 text-slate-300 px-4 py-3 rounded-xl text-xs">
+                  شماره تماس عمومی تا زمان تأیید و ثبت شماره واقعی اعلام نمی‌شود.
+                </div>
+              )}
             </div>
           </div>
 
@@ -117,7 +153,7 @@ export function HomePage() {
           <div className="lg:col-span-5 bg-slate-800/80 border border-slate-700 rounded-2xl p-6 space-y-4">
             <h2 className="font-bold text-lg text-amber-400 flex items-center gap-2">
               <ShieldCheck className="w-5 h-5" />
-              استانداردهای غیرقابل مذاکره عملیاتی
+              کنترل‌های ایمنی پیش‌بینی‌شده در نرم‌افزار
             </h2>
             <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
               <li className="flex items-start gap-2.5">
@@ -152,12 +188,10 @@ export function HomePage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">
-                وضعیت پوشش جغرافیایی سامانه در ایران
+                وضعیت محدوده‌های جغرافیایی پیکربندی‌شده
               </h2>
               <p className="text-xs text-slate-600 mt-1">
-                راه‌اندازی مرحله نخست به‌صورت متمرکز و کنترل‌شده در{' '}
-                <strong>استان قزوین</strong> انجام شده است. فعال‌سازی استان‌های بعدی منوط به
-                تکمیل ناوگان و تأیید رسمی مدیر کل است.
+                محدوده‌های مجاز اولیه در کد سامانه برای <strong>استان قزوین</strong> پیکربندی شده‌اند. نشان «فعال» فقط وضعیت جغرافیایی نرم‌افزار است و وجود ناوگان، اپراتور حاضر یا زمان اعزام را تضمین نمی‌کند؛ توسعه استان بعدی نیازمند تأیید رسمی مدیر کل است.
               </p>
             </div>
             <Link
@@ -172,7 +206,7 @@ export function HomePage() {
           {qazvinActiveZones.length > 0 && (
             <div>
               <div className="text-xs font-bold text-emerald-800 mb-2">
-                محدوده‌های عملیاتی فعال در استان قزوین ({qazvinActiveZones.length.toLocaleString('fa-IR')} منطقه):
+                زون‌های دارای وضعیت «فعال» در پیکربندی جغرافیایی ({qazvinActiveZones.length.toLocaleString('fa-IR')} مورد):
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {qazvinActiveZones.map((z) => (
@@ -182,7 +216,7 @@ export function HomePage() {
                   >
                     <span className="font-bold text-emerald-950">{z.nameFa}</span>
                     <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">
-                      فعال
+                      فعال در سامانه
                     </span>
                   </div>
                 ))}
@@ -218,7 +252,7 @@ export function HomePage() {
               خدمات امداد و حمل خودرو
             </h2>
             <p className="text-xs text-slate-500">
-              تعرفه‌های پایه مصوب به تومان (پیش از ضرایب مسافت و نوع خودرو)
+              نرخ پایه اولیه به تومان — فرضیه برنامه‌ریزی، نیازمند تأیید رسمی پیش از بهره‌برداری
             </p>
           </div>
           <Link
@@ -258,17 +292,23 @@ export function HomePage() {
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] text-slate-400">تعرفه پایه:</div>
+                  <div className="text-[11px] text-slate-400">فرضیه نرخ پایه:</div>
                   <div className="font-extrabold text-sm text-slate-900">
                     {formatToman(s.basePriceToman)}
                   </div>
                 </div>
-                <Link
-                  to={`/request/new?serviceId=${s.id}`}
-                  className="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition"
-                >
-                  درخواست خدمت
-                </Link>
+                {canSubmitRequest ? (
+                  <Link
+                    to={`/request/new?serviceId=${s.id}`}
+                    className="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition"
+                  >
+                    {demoMode ? 'اجرای دموی خدمت' : 'ثبت درخواست'}
+                  </Link>
+                ) : (
+                  <span className="bg-slate-100 text-slate-500 text-[11px] font-bold px-3 py-2 rounded-xl">
+                    سفارش عمومی غیرفعال
+                  </span>
+                )}
               </div>
             </div>
           ))}

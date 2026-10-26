@@ -40,6 +40,10 @@ export function SupportCenterPage() {
   const { user, systemInfo } = useAuth();
   const [searchParams] = useSearchParams();
   const initialReqId = searchParams.get('requestId') || '';
+  const supportTelHref = systemInfo?.supportHotline?.replace(/[^+\d]/g, '');
+  const publicOperationsEnabled = Boolean(
+    systemInfo?.isProduction && systemInfo.publicOperationsEnabled
+  );
 
   const [tickets, setTickets] = useState<TicketListItem[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketDetailData | null>(null);
@@ -97,7 +101,11 @@ export function SupportCenterPage() {
         }
       );
       setForm({ requestId: '', category: 'general', subject: '', message: '' });
-      setFeedback('تیکت / شکایت شما ثبت شد و در صف پیگیری اپراتور مرکز پیام قرار گرفت.');
+      setFeedback(
+        publicOperationsEnabled
+          ? 'تیکت در سامانه ثبت شد و در صف رسیدگی قرار گرفت؛ زمان پاسخ‌گویی فقط در صورت اعلام SLA رسمی معتبر است.'
+          : 'تیکت در محیط پیش از بهره‌برداری ثبت شد؛ اپراتور یا زمان پاسخ‌گویی واقعی تضمین نشده است.'
+      );
       await loadTickets();
       setSelectedTicket(res.ticket);
     } catch (err) {
@@ -132,7 +140,15 @@ export function SupportCenterPage() {
             مرکز پشتیبانی، شکایات و رسیدگی به اختلافات
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            پشتیبانی ۲۴ ساعته مرکز عملیات قزوین: {systemInfo?.supportHotline || '۰۲۸-۳۳۳۳۰۰۰۰'}
+            {supportTelHref ? (
+              <a className="underline" href={`tel:${supportTelHref}`}>
+                شماره تماس ثبت‌شده: {systemInfo?.supportHotline}
+              </a>
+            ) : (
+              'شماره تماس عمومی پس از تأیید شماره واقعی اعلام می‌شود.'
+            )}
+            {!publicOperationsEnabled &&
+              ' این سامانه هنوز در مرحله پیش از بهره‌برداری عمومی است؛ پاسخ‌گویی فوری یا ۲۴ساعته تضمین نشده است.'}
           </p>
         </div>
       </div>

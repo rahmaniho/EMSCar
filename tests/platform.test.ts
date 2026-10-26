@@ -716,11 +716,13 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
       },
     });
     const rolled1 = rollbackLastMigration(migTestCtx.db);
-    expect(rolled1).toBe('002_reference_catalog_qazvin.down.sql');
+    expect(rolled1).toBe('003_disable_unverified_launch_defaults.down.sql');
     const rolled2 = rollbackLastMigration(migTestCtx.db);
-    expect(rolled2).toBe('001_initial_schema.down.sql');
+    expect(rolled2).toBe('002_reference_catalog_qazvin.down.sql');
+    const rolled3 = rollbackLastMigration(migTestCtx.db);
+    expect(rolled3).toBe('001_initial_schema.down.sql');
     const reapplied = runMigrations(migTestCtx.db);
-    expect(reapplied.length).toBe(2);
+    expect(reapplied.length).toBe(3);
     migTestCtx.db.close();
   });
 
@@ -1263,4 +1265,76 @@ describe('سامانه جامع اورژانس خودرو — مجموعه تس�
     const slidesMod = await import('../site/data/slides.js');
     expect(charts.renderRiskMatrixSvg(slidesMod.RISKS_11, 'R1')).toContain('<svg');
   });
+  it('۱۸. NODE_ENV=production بر APP_ENV توسعه اولویت دارد، seed و Sandbox را می‌بندد و سفارش عمومی را تا فعال‌سازی صریح مسدود می‌کند', async () => {
+    const productionOverrides = {
+      NODE_ENV: 'production',
+      APP_ENV: 'development', // عمداً متناقض: NODE_ENV باید برنده شود.
+      DATABASE_PATH: path.join(tmpDir, 'production-guard.db'),
+      DATABASE_BACKUP_DIR: path.join(tmpDir, 'production-backups'),
+      PRIVATE_STORAGE_DIR: path.join(tmpDir, 'production-private'),
+      SESSION_SECRET: `test-only-secret-${'x'.repeat(48)}`,
+      PAYMENT_PROVIDER: 'zarinpal',
+      ENABLE_SANDBOX_GATEWAY: 'false',
+      ZARINPAL_MERCHANT_ID: '00000000-0000-0000-0000-000000000000',
+      ZARINPAL_SANDBOX: 'false',
+      SMS_PROVIDER: 'kavenegar',
+      KAVENEGAR_API_KEY: 'test-only-not-a-real-key',
+      SMS_SENDER_NUMBER: 'test-sender-line',
+      ENABLE_PUBLIC_OPERATIONS: 'false',
+      FEATURE_ENABLE_DEV_SEED: 'true',
+    };
+    const productionCtx = createAppContext({ configOverrides: productionOverrides });
+    productionCtx.attachErrorHandler();
+
+    try {
+      expect(productionCtx.config.isProduction).toBe(true);
+      expect(productionCtx.config.APP_ENV).toBe('production');
+      expect(productionCtx.config.FEATURE_ENABLE_DEV_SEED).toBe(false);
+      expect(
+        productionCtx.db.get<{ count: number }>('SELECT COUNT(*) AS count FROM users')?.count
+      ).toBe(0);
+      expect(
+        productionCtx.db.get<{ is_active: number }>(
+          "SELECT is_active FROM discount_codes WHERE code = 'QAZVIN1405'"
+        )?.is_active
+      ).toBe(0);
+
+      // حتی شماره باقیمانده از مهاجرت قدیمی/rollback نباید به‌عنوان خط واقعی منتشر شود.
+      productionCtx.db.run(
+        'UPDATE system_settings SET value_json = ? WHERE key = ?',
+        JSON.stringify('028-33330000'),
+        'support_hotline'
+      );
+      const publicInfo = await request(productionCtx.app)
+        .get('/api/system/public-info')
+        .expect(200);
+      expect(publicInfo.body.environment).toBe('production');
+      expect(publicInfo.body.devQuickLoginEnabled).toBe(false);
+      expect(publicInfo.body.publicOperationsEnabled).toBe(false);
+      expect(publicInfo.body.supportHotline).toBeNull();
+
+      const blocked = await request(productionCtx.app)
+        .post('/api/requests')
+        .send({})
+        .expect(503);
+      expect(blocked.body.error.code).toBe('PUBLIC_OPERATIONS_DISABLED');
+      expect(() => seedDevelopmentData(productionCtx.db, { isProduction: true })).toThrow();
+    } finally {
+      productionCtx.db.close();
+    }
+
+    // حتی اگر sandbox به‌صورت صریح انتخاب شده باشد، Production اجازه اجرا نمی‌دهد.
+    expect(() =>
+      createAppContext({
+        configOverrides: { ...productionOverrides, PAYMENT_PROVIDER: 'sandbox' },
+      })
+    ).toThrow(/Production/);
+    expect(() =>
+      createAppContext({
+        configOverrides: { ...productionOverrides, SMS_PROVIDER: 'sandbox_outbox' },
+      })
+    ).toThrow(/Production/);
+  });
+
+
 });

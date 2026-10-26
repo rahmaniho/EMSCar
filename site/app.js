@@ -162,7 +162,7 @@ function buildAll26SlidesHtml() {
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.55rem;font-size:0.76rem;color:#94A3B8;">
             <div class="card" style="padding:0.65rem;"><strong>تاریخ تهیه ارائه:</strong><br/>آبان ۱۴۰۵ (اکتبر ۲۰۲۶)</div>
-            <div class="card" style="padding:0.65rem;"><strong>مرحله فعلی محصول:</strong><br/>MVP فنی کامل (آماده پایلوت)</div>
+            <div class="card" style="padding:0.65rem;"><strong>مرحله فعلی محصول:</strong><br/>هسته نرم‌افزاری پیاده‌سازی‌شده؛ پایلوت در انتظار پیش‌نیازهای تجاری</div>
             <div class="card" style="padding:0.65rem;"><strong>کانون شروع عملیات:</strong><br/>۷ زون فعال استان قزوین</div>
           </div>
         </div>
@@ -201,7 +201,7 @@ function buildAll26SlidesHtml() {
         <div class="card">
           <span class="status-pill st-verified" style="margin-bottom:0.4rem;">۵. وضعیت فعلی پروژه</span>
           <h3>هسته نرم‌افزاری کامل و تست‌شده</h3>
-          <p>۱۶ ماژول دامنه، ۳۵ جدول تراکنشی، کاتالوگ ۱۵ خدمت، ۴ پنل نقش‌محور و ۱۵ مجموعه تست خودکار پاس‌شده در مخزن موجود است.</p>
+          <p>۱۴ ماژول سطح سرور (پوشش ۱۶ حوزه منطقی)، ۳۵ جدول، کاتالوگ ۱۵ خدمت، رابط‌های ۴ نقش و ۱۸ تست خودکار پاس‌شده در مخزن موجود است؛ این شواهد آمادگی تجاری یا ناوگان واقعی را اثبات نمی‌کنند.</p>
         </div>
         <div class="card">
           <span class="status-pill st-proposed" style="margin-bottom:0.4rem;">۶. مهم‌ترین هدف مرحله بعد</span>
@@ -966,7 +966,7 @@ function buildAll26SlidesHtml() {
           <h3>تمرکز بر عملیات، کیفیت ناوگان و پایداری محصول</h3>
           <ul style="margin:0.45rem 0 0;padding-right:1.1rem;font-size:0.81rem;color:#E2E8F0;display:grid;gap:0.4rem;">
             <li><strong>مدیریت محصول و کسب‌وکار:</strong> هدایت پایلوت قزوین، پایش KPIها و توسعه شراکت‌های استراتژیک.</li>
-            <li><strong>مهندس ارشد نرم‌افزار و زیرساخت:</strong> نگهداری هسته ۱۶ دامنه، امنیت، پایش سرور و اتصال سرویس‌های بیرونی.</li>
+            <li><strong>مهندس ارشد نرم‌افزار و زیرساخت:</strong> نگهداری ۱۴ ماژول سطح سرور و ۱۶ حوزه منطقی، امنیت، پایش و اتصال سرویس‌های بیرونی.</li>
             <li><strong>مسئول عملیات میدانی و ناوگان قزوین:</strong> جذب، بازرسی فنی/مدارک خودروبرها و کنترل کیفیت استاندارد خدمات.</li>
             <li><strong>اپراتورهای مرکز پیام و پشتیبانی:</strong> پوشش شیفت‌های عملیاتی برای مدیریت موارد ارجاعی (<code class="mono">operator_escalation</code>) و حل اختلاف.</li>
           </ul>
@@ -1090,7 +1090,7 @@ function buildAll26SlidesHtml() {
         </div>
         <div class="card" style="border-top:3px solid #22D3EE;">
           <h3>۲. دارایی و ارزش پیشنهادی EMSCar</h3>
-          <p>پلتفرم نرم‌افزاری آماده و تست‌شده در ۱۶ دامنه با پیش‌فاکتور قطعی تومان، تطبیق تخصصی تجهیزات/EV و حاکمیت جغرافیایی متمرکز بر قزوین.</p>
+          <p>هسته نرم‌افزاری ۱۴ ماژولی با پوشش ۱۶ حوزه منطقی و ۱۸ تست فعلی؛ پیش‌نیازهای ناوگان، مجوز، تعرفه رسمی و سرویس‌های تجاری هنوز باید فراهم و ارزیابی شوند.</p>
         </div>
         <div class="card" style="border-top:3px solid #22C55E;">
           <h3>۳. قدم عملیاتی بعدی</h3>
