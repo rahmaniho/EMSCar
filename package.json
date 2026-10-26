@@ -1,0 +1,49 @@
+{
+  "name": "auto-emergency-emscar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "سامانه جامع اورژانس خودرو (Auto Emergency) — پلتفرم عملیاتی امداد خودرو با راه‌اندازی اولیه در استان قزوین",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "NODE_NO_WARNINGS=1 tsx watch src/server/index.ts",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "NODE_NO_WARNINGS=1 NODE_ENV=production node dist/server/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "NODE_NO_WARNINGS=1 vitest run",
+    "test:watch": "NODE_NO_WARNINGS=1 vitest",
+    "db:migrate": "NODE_NO_WARNINGS=1 tsx src/server/db/cli.ts migrate",
+    "db:rollback": "NODE_NO_WARNINGS=1 tsx src/server/db/cli.ts rollback",
+    "db:status": "NODE_NO_WARNINGS=1 tsx src/server/db/cli.ts status",
+    "db:seed:dev": "NODE_NO_WARNINGS=1 tsx src/server/db/cli.ts seed-dev",
+    "db:backup": "NODE_NO_WARNINGS=1 tsx src/server/db/cli.ts backup"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/supertest": "^6.0.2",
+    "@vitejs/plugin-react": "^6.1.2",
+    "supertest": "^7.0.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
