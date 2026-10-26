@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment secrets (NEVER commit real secrets)
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Local runtime databases, private uploads, and backups
+data/*.db
+data/*.db-shm
+data/*.db-wal
+storage/private/*
+!storage/private/.gitkeep
+backups/*
+!backups/.gitkeep
+
+# Test & coverage
+coverage/
+.vitest/
+
+# Logs & OS
+*.log
+.DS_Store
