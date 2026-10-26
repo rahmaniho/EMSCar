@@ -77,6 +77,7 @@ npm run db:rollback   # بازگردانی آخرین Migration
 ---
 
 ## مستندات تخصصی مهندسی
+- [برنامه آمادگی و سنجش ظرفیت پایلوت قزوین (`docs/QAZVIN_PILOT_READINESS.md`)](docs/QAZVIN_PILOT_READINESS.md) — چک‌لیست شواهد، جذب ناوگان و دروازه‌های Go/No-Go؛ بدون داده یا ادعای عملیاتی ساختگی.
 - [گزارش ممیزی اولیه و تحلیل شکاف‌ها (`docs/AUDIT_REPORT.md`)](docs/AUDIT_REPORT.md)
 - [معماری سیستم، ماشین وضعیت و فرمول قیمت‌گذاری (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)
 - [امنیت، کنترل دسترسی و ملاحظات حقوقی نیازمند بررسی (`docs/SECURITY_AND_COMPLIANCE.md`)](docs/SECURITY_AND_COMPLIANCE.md)
