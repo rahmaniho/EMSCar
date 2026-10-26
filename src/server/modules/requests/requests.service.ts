@@ -1538,4 +1538,63 @@ export class RequestsService {
       originalName: row.original_name,
     };
   }
+
+  /**
+   * استعلام عمومی و ایمن وضعیت مأموریت با کد رهگیری (حذف کامل داده‌های شخصی، پلاک و مختصات دقیق)
+   */
+  getPublicTrackingSummary(trackingCode: string) {
+    const cleanCode = trackingCode.trim().toUpperCase();
+    const row = this.db.get<{
+      tracking_code: string;
+      status: RequestState;
+      payment_status: PaymentStatus;
+      service_title: string;
+      province_name: string;
+      zone_name: string;
+      estimated_eta_minutes: number | null;
+      operator_escalation_required: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT
+         r.tracking_code, r.status, r.payment_status,
+         s.title_fa AS service_title,
+         p.name_fa AS province_name,
+         z.name_fa AS zone_name,
+         r.estimated_eta_minutes,
+         r.operator_escalation_required,
+         r.created_at, r.updated_at
+       FROM service_requests r
+       JOIN service_catalog s ON s.id = r.service_id
+       JOIN provinces p ON p.id = r.province_id
+       JOIN service_zones z ON z.id = r.zone_id
+       WHERE UPPER(r.tracking_code) = ?`,
+      cleanCode
+    );
+
+    if (!row) {
+      throw new AppError(
+        404,
+        'TRACKING_CODE_NOT_FOUND',
+        'پرونده‌ای با این کد رهگیری یافت نشد. لطفاً صحت کد رهگیری (مانند QZV-...) را بررسی نمایید.'
+      );
+    }
+
+    return {
+      trackingCode: row.tracking_code,
+      status: row.status,
+      statusLabel: REQUEST_STATE_LABELS[row.status],
+      paymentStatus: row.payment_status,
+      paymentStatusLabel: PAYMENT_STATUS_LABELS[row.payment_status],
+      serviceTitle: row.service_title,
+      provinceName: row.province_name,
+      zoneName: row.zone_name,
+      estimatedEtaMinutes: ['Accepted', 'EnRoute'].includes(row.status)
+        ? row.estimated_eta_minutes
+        : null,
+      operatorEscalationRequired: row.operator_escalation_required === 1,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
 }

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
+import { useRealtimeEvents } from '../lib/use-realtime.ts';
 import {
   formatDateTimeFa,
   formatToman,
@@ -145,6 +146,31 @@ export function OperatorPanelPage() {
   useEffect(() => {
     void loadAll();
   }, [statusFilter, escalatedOnly]);
+
+  useRealtimeEvents(true, () => {
+    void loadAll();
+  });
+
+  const handleStaffTransition = async (
+    requestId: number,
+    toStatus: RequestState
+  ) => {
+    setFeedback(null);
+    setErrorMsg(null);
+    try {
+      await apiFetch(`/api/requests/${requestId}/staff-transition`, {
+        method: 'POST',
+        body: JSON.stringify({
+          toStatus,
+          note: `تغییر وضعیت کنترلی توسط اپراتور مرکز پیام به ${toStatus}`,
+        }),
+      });
+      setFeedback(`وضعیت مأموریت به «${REQUEST_STATE_LABELS[toStatus] || toStatus}» تغییر یافت.`);
+      await loadAll();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'خطا در تغییر وضعیت کنترلی');
+    }
+  };
 
   const handleLoadCandidates = async (requestId: number) => {
     setErrorMsg(null);
@@ -501,6 +527,23 @@ export function OperatorPanelPage() {
                             className="bg-indigo-100 hover:bg-indigo-200 text-indigo-950 font-bold px-3 py-2 rounded-xl"
                           >
                             ثبت مهلت پرداخت اضطراری
+                          </button>
+                        )}
+
+                        {![
+                          'Completed',
+                          'Cancelled',
+                          'Failed',
+                          'UnderSupportReview',
+                        ].includes(r.status) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleStaffTransition(r.id, 'UnderSupportReview')
+                            }
+                            className="bg-purple-100 hover:bg-purple-200 text-purple-950 font-bold px-3 py-2 rounded-xl"
+                          >
+                            تعلیق جهت بررسی پشتیبانی
                           </button>
                         )}
 

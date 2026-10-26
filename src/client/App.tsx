@@ -12,6 +12,7 @@ import { ResponderDashboardPage } from './pages/ResponderDashboardPage.tsx';
 import { SupportCenterPage } from './pages/SupportCenterPage.tsx';
 import { OperatorPanelPage } from './pages/OperatorPanelPage.tsx';
 import { AdminPanelPage } from './pages/AdminPanelPage.tsx';
+import { PublicTrackAndLegalPage } from './pages/PublicTrackAndLegalPage.tsx';
 
 function ProtectedRoute({
   children,
@@ -59,6 +60,8 @@ export function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/services" element={<ServicesCatalogPage />} />
+            <Route path="/track" element={<PublicTrackAndLegalPage />} />
+            <Route path="/legal" element={<PublicTrackAndLegalPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/support" element={<SupportCenterPage />} />
             <Route path="/request/new" element={<NewRequestPage />} />
@@ -80,7 +83,15 @@ export function App() {
               }
             />
             <Route
-              path="/responder"
+              path="/missions/:id/track"
+              element={
+                <ProtectedRoute>
+                  <RequestDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/responder/*"
               element={
                 <ProtectedRoute allowedRoles={['responder', 'admin']}>
                   <ResponderDashboardPage />
@@ -97,6 +108,14 @@ export function App() {
             />
             <Route
               path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminPanelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/:section"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminPanelPage />

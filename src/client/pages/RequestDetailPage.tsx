@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth-context.tsx';
 import { apiFetch } from '../lib/api.ts';
+import { useRealtimeEvents } from '../lib/use-realtime.ts';
 import { LiveMissionMap } from '../components/LiveMissionMap.tsx';
 import {
   StatusTimeline,
@@ -156,6 +157,12 @@ export function RequestDetailPage() {
     }, 10000);
     return () => clearInterval(timer);
   }, [loadDetail]);
+
+  useRealtimeEvents(Boolean(user && id), (ev) => {
+    if (!ev.requestId || String(ev.requestId) === String(id)) {
+      void loadDetail();
+    }
+  });
 
   const handleSubmitDraft = async () => {
     if (!data) return;

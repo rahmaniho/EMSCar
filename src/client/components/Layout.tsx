@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth-context.tsx';
 import { apiFetch } from '../lib/api.ts';
+import { useRealtimeEvents } from '../lib/use-realtime.ts';
 import { USER_ROLE_LABELS } from '../../shared/constants.ts';
 import { formatDateTimeFa } from '../lib/format.ts';
 
@@ -63,6 +64,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       clearInterval(timer);
     };
   }, [user]);
+
+  useRealtimeEvents(Boolean(user), () => {
+    void apiFetch<{ notifications: InAppNotification[] }>('/api/notifications')
+      .then((res) => setNotifications(res.notifications))
+      .catch(() => {});
+  });
 
   const unreadCount = notifications.filter((n) => n.is_read === 0).length;
 
@@ -152,6 +159,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className={`hover:text-amber-400 transition ${location.pathname === '/services' ? 'text-amber-400' : 'text-slate-200'}`}
             >
               خدمات و تعرفه‌ها
+            </Link>
+            <Link
+              to="/track"
+              className={`hover:text-amber-400 transition ${location.pathname === '/track' ? 'text-amber-400' : 'text-slate-200'}`}
+            >
+              پیگیری مأموریت
             </Link>
             <Link
               to="/request/new"
@@ -300,6 +313,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link to="/services" className="block py-2 text-slate-200">
               کاتالوگ خدمات و تعرفه‌ها
             </Link>
+            <Link to="/track" className="block py-2 text-slate-200">
+              پیگیری وضعیت مأموریت با کد رهگیری
+            </Link>
+            <Link to="/legal" className="block py-2 text-slate-200">
+              ایمنی جاده‌ای و قوانین لغو
+            </Link>
             <Link to="/support" className="block py-2 text-slate-200">
               مرکز پشتیبانی و ثبت شکایات
             </Link>
@@ -352,6 +371,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <li>
                 <Link to="/support" className="hover:text-amber-400">
                   ثبت شکایت، پیگیری پشتیبانی و قوانین لغو
+                </Link>
+              </li>
+              <li>
+                <Link to="/track" className="hover:text-amber-400">
+                  استعلام وضعیت مأموریت با کد رهگیری
+                </Link>
+              </li>
+              <li>
+                <Link to="/legal" className="hover:text-amber-400">
+                  راهنمای ایمنی کنار جاده، تعرفه و ملاحظات حقوقی
                 </Link>
               </li>
               <li>

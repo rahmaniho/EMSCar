@@ -1,5 +1,6 @@
 import type { AppDatabase } from '../../db/connection.ts';
 import type { AuditService } from '../audit/audit.service.ts';
+import type { RealtimeBus } from '../events/realtime-bus.ts';
 import { AppError } from '../../middleware/error-handler.ts';
 import {
   EQUIPMENT_TYPE_LABELS,
@@ -14,10 +15,16 @@ const SHEBA_REGEX = /^IR\d{24}$/;
 export class RespondersService {
   private readonly db: AppDatabase;
   private readonly audit: AuditService;
+  private readonly realtimeBus?: RealtimeBus;
 
-  constructor(params: { db: AppDatabase; audit: AuditService }) {
+  constructor(params: {
+    db: AppDatabase;
+    audit: AuditService;
+    realtimeBus?: RealtimeBus;
+  }) {
     this.db = params.db;
     this.audit = params.audit;
+    this.realtimeBus = params.realtimeBus;
   }
 
   getResponderByUserId(userId: number) {
@@ -327,6 +334,32 @@ export class RespondersService {
       now,
       profile.id
     );
+
+    if (this.realtimeBus) {
+      const activeMission = this.db.get<{
+        id: number;
+        customer_user_id: number;
+        status: string;
+      }>(
+        `SELECT id, customer_user_id, status
+         FROM service_requests
+         WHERE assigned_responder_id = ?
+           AND status IN ('Accepted', 'EnRoute', 'Arrived', 'InProgress')
+         ORDER BY id DESC LIMIT 1`,
+        profile.id
+      );
+
+      if (activeMission) {
+        this.realtimeBus.publish({
+          type: 'RESPONDER_LOCATION_UPDATED',
+          requestId: activeMission.id,
+          customerUserId: activeMission.customer_user_id,
+          responderUserId: userId,
+          status: activeMission.status,
+        });
+      }
+    }
+
     return { lat, lng, updatedAt: now };
   }
 

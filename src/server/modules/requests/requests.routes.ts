@@ -82,6 +82,17 @@ export function createRequestsRouter(params: {
   const responderOnly = requireRole(params.auditService, 'responder');
   const staffOnly = requireRole(params.auditService, 'operator', 'admin');
 
+  // استعلام عمومی وضعیت مأموریت با کد رهگیری (بدون افشای اطلاعات هویتی یا مکانی دقیق)
+  router.get(
+    '/track/:trackingCode',
+    asyncHandler((req, res) => {
+      const summary = params.requestsService.getPublicTrackingSummary(
+        String(req.params.trackingCode)
+      );
+      res.json({ ok: true, summary });
+    })
+  );
+
   // فهرست درخواست‌های مشتری
   router.get(
     '/my',
