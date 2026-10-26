@@ -38,6 +38,7 @@ const processSettlementSchema = z.object({
   decision: z.enum(['approved_paid', 'rejected']),
   bankReferenceCode: z.string().max(80).optional(),
   note: z.string().max(400).optional(),
+  externalTransferConfirmed: z.boolean().optional(),
 });
 
 export function createPaymentsRouter(params: {
@@ -54,6 +55,17 @@ export function createPaymentsRouter(params: {
     '/gateway-info',
     asyncHandler((_req, res) => {
       res.json({ ok: true, gateway: params.paymentsService.getGatewayStatus() });
+    })
+  );
+
+  router.get(
+    '/staff/capabilities',
+    staffOnly,
+    asyncHandler((_req, res) => {
+      res.json({
+        ok: true,
+        postpayDebtEnabled: params.paymentsService.isPostpayDebtEnabled(),
+      });
     })
   );
 
@@ -214,6 +226,7 @@ export function createPaymentsRouter(params: {
         decision: body.decision,
         bankReferenceCode: body.bankReferenceCode,
         note: body.note,
+        externalTransferConfirmed: body.externalTransferConfirmed,
         adminUserId: req.user!.id,
       });
       res.json({ ok: true, result });

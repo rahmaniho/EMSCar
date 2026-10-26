@@ -192,9 +192,9 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending_gateway: 'در انتظار تأیید درگاه',
   paid: 'پرداخت‌شده (تأیید سرور)',
   failed: 'پرداخت ناموفق',
-  refunded: 'بازپرداخت کامل',
-  partially_refunded: 'بازپرداخت جزئی',
-  approved_debt: 'بدهی مجاز ثبت‌شده',
+  refunded: 'وضعیت بازپرداخت ثبت‌شده؛ مبلغ نیازمند تطبیق',
+  partially_refunded: 'وضعیت بازپرداخت جزئی ثبت‌شده؛ مبلغ نیازمند تطبیق',
+  approved_debt: 'بدهی مجاز ثبت‌شده؛ وجه دریافت نشده',
 };
 
 export const TICKET_STATUSES = [

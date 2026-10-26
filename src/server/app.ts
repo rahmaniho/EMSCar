@@ -83,7 +83,11 @@ export function createAppContext(options?: CreateAppOptions) {
     sessionTtlHours: config.SESSION_TTL_HOURS,
   });
   const geographyService = new GeographyService({ db, audit: auditService });
-  const catalogService = new CatalogService({ db, audit: auditService });
+  const catalogService = new CatalogService({
+    db,
+    audit: auditService,
+    allowEvServicesByEnvironment: config.FEATURE_ALLOW_EV_SERVICES,
+  });
   const customersService = new CustomersService(db);
   const respondersService = new RespondersService({
     db,
@@ -123,6 +127,7 @@ export function createAppContext(options?: CreateAppOptions) {
     gateway: paymentGateway,
     notifications: notificationsService,
     audit: auditService,
+    allowPostpayDebtByEnvironment: config.FEATURE_ALLOW_POSTPAY_DEBT,
   });
   const supportService = new SupportService({
     db,
@@ -136,6 +141,8 @@ export function createAppContext(options?: CreateAppOptions) {
     responders: respondersService,
     payments: paymentsService,
     geography: geographyService,
+    allowEvServicesByEnvironment: config.FEATURE_ALLOW_EV_SERVICES,
+    allowPostpayDebtByEnvironment: config.FEATURE_ALLOW_POSTPAY_DEBT,
   });
 
   const app = express();

@@ -35,10 +35,39 @@ interface RawServiceRow {
 export class CatalogService {
   private readonly db: AppDatabase;
   private readonly audit: AuditService;
+  private readonly allowEvServicesByEnvironment: boolean;
 
-  constructor(params: { db: AppDatabase; audit: AuditService }) {
+  constructor(params: {
+    db: AppDatabase;
+    audit: AuditService;
+    allowEvServicesByEnvironment: boolean;
+  }) {
     this.db = params.db;
     this.audit = params.audit;
+    this.allowEvServicesByEnvironment = params.allowEvServicesByEnvironment;
+  }
+
+  private areEvServicesEnabled(): boolean {
+    if (!this.allowEvServicesByEnvironment) return false;
+    const setting = this.db.get<{ value_json: string }>(
+      `SELECT value_json FROM system_settings WHERE key = 'allow_ev_services'`
+    );
+    if (!setting) return false;
+    try {
+      return JSON.parse(setting.value_json) === true;
+    } catch {
+      return false;
+    }
+  }
+
+  private assertServiceFeatureEnabled(service: ReturnType<CatalogService['mapService']>) {
+    if (service.requiresEvCertification && !this.areEvServicesEnabled()) {
+      throw new AppError(
+        503,
+        'EV_SERVICES_DISABLED',
+        'خدمات تخصصی خودروهای برقی فعلاً غیرفعال است و درخواست جدید برای این خدمت پذیرفته نمی‌شود.'
+      );
+    }
   }
 
   private mapService(row: RawServiceRow) {
@@ -70,6 +99,7 @@ export class CatalogService {
   }
 
   listPublishedServices(zoneId?: number) {
+    const evServicesEnabled = this.areEvServicesEnabled();
     if (zoneId) {
       const rows = this.db.all<RawServiceRow & { custom_base_price_toman: number | null }>(
         `SELECT s.*, zs.custom_base_price_toman
@@ -79,19 +109,23 @@ export class CatalogService {
          ORDER BY s.id ASC`,
         zoneId
       );
-      return rows.map((r) => {
-        const mapped = this.mapService(r);
-        if (r.custom_base_price_toman !== null) {
-          mapped.basePriceToman = r.custom_base_price_toman;
-        }
-        return mapped;
-      });
+      return rows
+        .map((r) => {
+          const mapped = this.mapService(r);
+          if (r.custom_base_price_toman !== null) {
+            mapped.basePriceToman = r.custom_base_price_toman;
+          }
+          return mapped;
+        })
+        .filter((service) => !service.requiresEvCertification || evServicesEnabled);
     }
 
     const rows = this.db.all<RawServiceRow>(
       'SELECT * FROM service_catalog WHERE is_published = 1 ORDER BY id ASC'
     );
-    return rows.map((r) => this.mapService(r));
+    return rows
+      .map((r) => this.mapService(r))
+      .filter((service) => !service.requiresEvCertification || evServicesEnabled);
   }
 
   listAllServicesForAdmin() {
@@ -102,6 +136,19 @@ export class CatalogService {
   }
 
   getServiceById(serviceId: number, zoneId?: number) {
+    return this.getServiceByIdInternal(serviceId, zoneId, false);
+  }
+
+  /** Existing persisted missions must remain serviceable after the new-service EV gate is turned off. */
+  getServiceForExistingMission(serviceId: number, zoneId: number) {
+    return this.getServiceByIdInternal(serviceId, zoneId, true);
+  }
+
+  private getServiceByIdInternal(
+    serviceId: number,
+    zoneId: number | undefined,
+    allowDisabledEvForExistingMission: boolean
+  ) {
     const row = this.db.get<RawServiceRow>(
       'SELECT * FROM service_catalog WHERE id = ?',
       serviceId
@@ -110,7 +157,8 @@ export class CatalogService {
       throw new AppError(404, 'SERVICE_NOT_FOUND', 'خدمت انتخاب‌شده یافت نشد.');
     }
     const mapped = this.mapService(row);
-    if (zoneId) {
+    if (zoneId !== undefined) {
+      if (!allowDisabledEvForExistingMission) this.assertServiceFeatureEnabled(mapped);
       const zs = this.db.get<{
         is_enabled: number;
         custom_base_price_toman: number | null;

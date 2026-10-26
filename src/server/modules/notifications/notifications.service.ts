@@ -76,7 +76,7 @@ export class NotificationsService {
         type:
           params.eventType === 'MISSION_OFFER'
             ? 'DISPATCH_OFFERED'
-            : params.eventType === 'PAYMENT_VERIFIED'
+            : ['PAYMENT_VERIFIED', 'PAYMENT_SANDBOX_VERIFIED'].includes(params.eventType)
               ? 'PAYMENT_UPDATED'
               : params.eventType === 'SUPPORT_REPLY'
                 ? 'SUPPORT_TICKET_UPDATED'
@@ -128,21 +128,46 @@ export class NotificationsService {
     notificationId: number,
     toPhone: string,
     message: string
-  ): Promise<{ ok: boolean; status: string }> {
+  ): Promise<{
+    ok: boolean;
+    status: 'provider_accepted' | 'sandbox_logged' | 'failed';
+    providerName?: string;
+    providerMessageId?: string | null;
+    acceptedByProvider: boolean;
+    simulationOnly: boolean;
+  }> {
     const now = new Date().toISOString();
     try {
       const res = await this.smsProvider.sendSms(toPhone, message);
+      if (
+        !res.providerName ||
+        (res.status === 'provider_accepted' &&
+          (!res.providerMessageId || !res.providerMessageId.trim())) ||
+        (this.smsProvider.isSandbox && res.status !== 'sandbox_logged') ||
+        (!this.smsProvider.isSandbox && res.status !== 'provider_accepted')
+      ) {
+        throw new Error('پاسخ آداپتور پیامک برای پذیرش provider معتبر نیست.');
+      }
+
+      const acceptedByProvider = res.status === 'provider_accepted';
       this.db.run(
         `UPDATE notifications
          SET delivery_status = ?, provider_name = ?, provider_message_id = ?, error_message = NULL, updated_at = ?
          WHERE id = ?`,
-        res.status,
+        acceptedByProvider ? 'sent' : 'sandbox_logged',
         res.providerName,
         res.providerMessageId,
         now,
         notificationId
       );
-      return { ok: true, status: res.status };
+      return {
+        ok: acceptedByProvider,
+        status: res.status,
+        providerName: res.providerName,
+        providerMessageId: res.providerMessageId,
+        acceptedByProvider,
+        simulationOnly: !acceptedByProvider,
+      };
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'خطای ناشناخته درگاه پیامک';
       this.db.run(
@@ -153,7 +178,12 @@ export class NotificationsService {
         now,
         notificationId
       );
-      return { ok: false, status: 'failed' };
+      return {
+        ok: false,
+        status: 'failed',
+        acceptedByProvider: false,
+        simulationOnly: false,
+      };
     }
   }
 

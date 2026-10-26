@@ -134,7 +134,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span>
               {' '}| درگاه: {systemInfo.integrations.paymentGateway.isSandbox
                 ? 'Sandbox، بدون تراکنش بانکی'
-                : systemInfo.integrations.paymentGateway.providerName}
+                : `${systemInfo.integrations.paymentGateway.providerName} انتخاب‌شده؛ اعتبار کلید و اتصال زنده تأیید نشده`}
               {' '}| پیامک: {systemInfo.integrations.smsProvider.isSandbox
                 ? 'صف آزمایشی، بدون ارسال مخابراتی'
                 : systemInfo.integrations.smsProvider.providerName}

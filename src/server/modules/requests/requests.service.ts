@@ -266,11 +266,19 @@ export class RequestsService {
       customer_user_id: number;
       status: RequestState;
       discount_code: string | null;
-    }>('SELECT id, customer_user_id, status, discount_code FROM service_requests WHERE id = ?', requestId);
+      service_id: number;
+      zone_id: number;
+    }>(
+      'SELECT id, customer_user_id, status, discount_code, service_id, zone_id FROM service_requests WHERE id = ?',
+      requestId
+    );
 
     if (!row || row.customer_user_id !== customerUserId) {
       throw new AppError(404, 'REQUEST_NOT_FOUND', 'درخواست یافت نشد.');
     }
+
+    // پیش‌نویس ممکن است پس از تغییر تنظیم قابلیت باقی مانده باشد؛ هنگام ارسال، خدمت و زون را دوباره بررسی می‌کنیم.
+    this.catalog.getServiceById(row.service_id, row.zone_id);
 
     assertValidStateTransition({
       from: row.status,
@@ -445,6 +453,27 @@ export class RequestsService {
       }
     }
 
+    const latestVerifiedPayment = this.db.get<{ is_sandbox: number; status: string }>(
+      `SELECT is_sandbox, status FROM payment_intents
+       WHERE request_id = ? AND status IN ('verified', 'refunded', 'partially_refunded')
+       ORDER BY id DESC LIMIT 1`,
+      requestId
+    );
+    const verifiedRefundCount = this.db.get<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM refunds
+       WHERE request_id = ? AND status = 'completed' AND verification_mode = 'provider_verified'`,
+      requestId
+    )?.cnt ?? 0;
+    const paymentIsSandbox = latestVerifiedPayment?.is_sandbox === 1;
+    const isRefundState = ['refunded', 'partially_refunded'].includes(row.payment_status);
+    const paymentStatusLabel = paymentIsSandbox
+      ? 'پرداخت آزمایشی (Sandbox)؛ هیچ وجه واقعی جابه‌جا نشده'
+      : isRefundState && verifiedRefundCount === 0
+        ? 'وضعیت بازپرداخت قدیمی/راستی‌آزمایی‌نشده'
+        : row.payment_status === 'paid' && !latestVerifiedPayment
+          ? 'وضعیت پرداخت قدیمی/بدون مدرک provider'
+          : PAYMENT_STATUS_LABELS[row.payment_status];
+
     let responderInfo = null;
     if (row.assigned_responder_id) {
       const respRow = this.db.get<{
@@ -570,7 +599,8 @@ export class RequestsService {
       status: row.status,
       statusLabel: REQUEST_STATE_LABELS[row.status],
       paymentStatus: row.payment_status,
-      paymentStatusLabel: PAYMENT_STATUS_LABELS[row.payment_status],
+      paymentStatusLabel,
+      paymentIsSandbox,
       customer: {
         id: row.customer_user_id,
         fullName: row.customer_name,
@@ -875,7 +905,7 @@ export class RequestsService {
 
     // محاسبه نهایی بر اساس قوانین قیمت‌گذاری سمت سرور (با در نظر گرفتن قطعات و مسافت واقعی)
     const rules = this.pricing.getRules();
-    const finalQuote = this.pricing.calculateQuote({
+    const finalQuote = this.pricing.calculateExistingMissionQuote({
       serviceId: reqRow.service_id,
       origin: { lat: reqRow.origin_lat, lng: reqRow.origin_lng },
       destination,
@@ -1318,6 +1348,8 @@ export class RequestsService {
       tracking_code: string;
       status: RequestState;
       payment_status: PaymentStatus;
+      payment_is_sandbox: number | null;
+      has_verified_refund: number;
       service_title: string;
       zone_name: string;
       vehicle_brand: string;
@@ -1328,6 +1360,12 @@ export class RequestsService {
     }>(
       `SELECT
          r.id, r.tracking_code, r.status, r.payment_status,
+         (SELECT p.is_sandbox FROM payment_intents p
+          WHERE p.request_id = r.id AND p.status IN ('verified', 'refunded', 'partially_refunded')
+          ORDER BY p.id DESC LIMIT 1) AS payment_is_sandbox,
+         EXISTS (SELECT 1 FROM refunds f
+          WHERE f.request_id = r.id AND f.status = 'completed'
+            AND f.verification_mode = 'provider_verified') AS has_verified_refund,
          s.title_fa AS service_title, z.name_fa AS zone_name,
          v.brand AS vehicle_brand, v.model AS vehicle_model,
          r.estimated_price_toman, r.final_price_toman, r.created_at
@@ -1339,19 +1377,31 @@ export class RequestsService {
        ORDER BY r.id DESC`,
       customerUserId
     );
-    return rows.map((r) => ({
-      id: r.id,
-      trackingCode: r.tracking_code,
-      status: r.status,
-      statusLabel: REQUEST_STATE_LABELS[r.status],
-      paymentStatus: r.payment_status,
-      paymentStatusLabel: PAYMENT_STATUS_LABELS[r.payment_status],
-      serviceTitle: r.service_title,
-      zoneName: r.zone_name,
-      vehicleSummary: `${r.vehicle_brand} ${r.vehicle_model}`,
-      payableToman: r.final_price_toman ?? r.estimated_price_toman,
-      createdAt: r.created_at,
-    }));
+    return rows.map((r) => {
+      const paymentIsSandbox = r.payment_is_sandbox === 1;
+      const isRefundState = ['refunded', 'partially_refunded'].includes(r.payment_status);
+      const paymentStatusLabel = paymentIsSandbox
+        ? 'پرداخت آزمایشی (Sandbox)؛ هیچ وجه واقعی جابه‌جا نشده'
+        : isRefundState && r.has_verified_refund !== 1
+          ? 'وضعیت بازپرداخت قدیمی/راستی‌آزمایی‌نشده'
+          : r.payment_status === 'paid' && r.payment_is_sandbox === null
+            ? 'وضعیت پرداخت قدیمی/بدون مدرک provider'
+            : PAYMENT_STATUS_LABELS[r.payment_status];
+      return {
+        id: r.id,
+        trackingCode: r.tracking_code,
+        status: r.status,
+        statusLabel: REQUEST_STATE_LABELS[r.status],
+        paymentStatus: r.payment_status,
+        paymentStatusLabel,
+        paymentIsSandbox,
+        serviceTitle: r.service_title,
+        zoneName: r.zone_name,
+        vehicleSummary: `${r.vehicle_brand} ${r.vehicle_model}`,
+        payableToman: r.final_price_toman ?? r.estimated_price_toman,
+        createdAt: r.created_at,
+      };
+    });
   }
 
   listResponderMissions(responderUserId: number) {
@@ -1404,6 +1454,12 @@ export class RequestsService {
     let sql = `
       SELECT
         r.id, r.tracking_code, r.status, r.payment_status,
+        (SELECT p.is_sandbox FROM payment_intents p
+         WHERE p.request_id = r.id AND p.status IN ('verified', 'refunded', 'partially_refunded')
+         ORDER BY p.id DESC LIMIT 1) AS payment_is_sandbox,
+        EXISTS (SELECT 1 FROM refunds f
+         WHERE f.request_id = r.id AND f.status = 'completed'
+           AND f.verification_mode = 'provider_verified') AS has_verified_refund,
         r.operator_escalation_required, r.operator_escalation_reason,
         cu.full_name AS customer_name, cu.phone AS customer_phone,
         s.title_fa AS service_title, z.name_fa AS zone_name,
@@ -1548,6 +1604,8 @@ export class RequestsService {
       tracking_code: string;
       status: RequestState;
       payment_status: PaymentStatus;
+      payment_is_sandbox: number | null;
+      has_verified_refund: number;
       service_title: string;
       province_name: string;
       zone_name: string;
@@ -1558,6 +1616,12 @@ export class RequestsService {
     }>(
       `SELECT
          r.tracking_code, r.status, r.payment_status,
+         (SELECT pi.is_sandbox FROM payment_intents pi
+          WHERE pi.request_id = r.id AND pi.status IN ('verified', 'refunded', 'partially_refunded')
+          ORDER BY pi.id DESC LIMIT 1) AS payment_is_sandbox,
+         EXISTS (SELECT 1 FROM refunds f
+          WHERE f.request_id = r.id AND f.status = 'completed'
+            AND f.verification_mode = 'provider_verified') AS has_verified_refund,
          s.title_fa AS service_title,
          p.name_fa AS province_name,
          z.name_fa AS zone_name,
@@ -1580,12 +1644,23 @@ export class RequestsService {
       );
     }
 
+    const paymentIsSandbox = row.payment_is_sandbox === 1;
+    const isRefundState = ['refunded', 'partially_refunded'].includes(row.payment_status);
+    const paymentStatusLabel = paymentIsSandbox
+      ? 'پرداخت آزمایشی (Sandbox)؛ هیچ وجه واقعی جابه‌جا نشده'
+      : isRefundState && row.has_verified_refund !== 1
+        ? 'وضعیت بازپرداخت قدیمی/راستی‌آزمایی‌نشده'
+        : row.payment_status === 'paid' && row.payment_is_sandbox === null
+          ? 'وضعیت پرداخت قدیمی/بدون مدرک provider'
+          : PAYMENT_STATUS_LABELS[row.payment_status];
+
     return {
       trackingCode: row.tracking_code,
       status: row.status,
       statusLabel: REQUEST_STATE_LABELS[row.status],
       paymentStatus: row.payment_status,
-      paymentStatusLabel: PAYMENT_STATUS_LABELS[row.payment_status],
+      paymentStatusLabel,
+      paymentIsSandbox,
       serviceTitle: row.service_title,
       provinceName: row.province_name,
       zoneName: row.zone_name,

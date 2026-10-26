@@ -13,27 +13,44 @@ export class PaymentsService {
   private gateway: PaymentGatewayProvider;
   private readonly notifications: NotificationsService;
   private readonly audit: AuditService;
+  private readonly allowPostpayDebtByEnvironment: boolean;
 
   constructor(params: {
     db: AppDatabase;
     gateway: PaymentGatewayProvider;
     notifications: NotificationsService;
     audit: AuditService;
+    allowPostpayDebtByEnvironment: boolean;
   }) {
     this.db = params.db;
     this.gateway = params.gateway;
     this.notifications = params.notifications;
     this.audit = params.audit;
+    this.allowPostpayDebtByEnvironment = params.allowPostpayDebtByEnvironment;
   }
 
   getGatewayStatus() {
     return {
       providerName: this.gateway.name,
       isSandbox: this.gateway.isSandbox,
+      connectionVerified: false,
       noticeFa: this.gateway.isSandbox
-        ? 'محیط آزمایشی (Sandbox) فعال است — هیچ وجه واقعی بانکی جابه‌جا نمی‌شود.'
-        : 'متصل به درگاه پرداخت شاپرک',
+        ? 'محیط شبیه‌سازی (Sandbox) فعال است — هیچ وجه واقعی بانکی جابه‌جا نمی‌شود.'
+        : 'این فقط نام ارائه‌دهندهٔ انتخاب‌شده است؛ وجود کلید معتبر، اتصال زنده یا سلامت درگاه را اثبات نمی‌کند. هر پرداخت فقط پس از پاسخ معتبر استعلام سرور تأیید می‌شود.',
     };
+  }
+
+  isPostpayDebtEnabled(): boolean {
+    if (!this.allowPostpayDebtByEnvironment) return false;
+    const setting = this.db.get<{ value_json: string }>(
+      `SELECT value_json FROM system_settings WHERE key = 'allow_postpay_debt'`
+    );
+    if (!setting) return false;
+    try {
+      return JSON.parse(setting.value_json) === true;
+    } catch {
+      return false;
+    }
   }
 
   private getCurrentWalletBalance(responderId: number): number {
@@ -43,6 +60,40 @@ export class PaymentsService {
       responderId
     );
     return row?.balance_after_toman ?? 0;
+  }
+
+  /** Only invoice earnings linked to a verified payment of the current mode may fund a settlement. */
+  private getEligibleSettlementBalance(responderId: number, isSandbox: boolean): number {
+    const earnings = this.db.get<{ total: number }>(
+      `SELECT COALESCE(SUM(i.responder_net_toman), 0) AS total
+       FROM invoices i
+       WHERE i.responder_id = ? AND i.status IN ('paid', 'refunded')
+         AND EXISTS (
+           SELECT 1 FROM payment_intents p
+           WHERE p.request_id = i.request_id AND p.is_sandbox = ?
+             AND p.status IN ('verified', 'refunded', 'partially_refunded')
+         )`,
+      responderId,
+      isSandbox ? 1 : 0
+    );
+    const refundReversals = this.db.get<{ total: number }>(
+      `SELECT COALESCE(SUM(-amount_toman), 0) AS total
+       FROM wallet_ledger_entries
+       WHERE responder_id = ? AND entry_type = 'refund_reversal' AND amount_toman < 0`,
+      responderId
+    );
+    const committedSettlements = this.db.get<{ total: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total
+       FROM settlements WHERE responder_id = ? AND status IN ('requested', 'approved_paid')`,
+      responderId
+    );
+
+    return Math.max(
+      0,
+      Number(earnings?.total ?? 0) -
+        Number(refundReversals?.total ?? 0) -
+        Number(committedSettlements?.total ?? 0)
+    );
   }
 
   private appendLedgerEntry(params: {
@@ -218,6 +269,7 @@ export class PaymentsService {
       amount_rial: number;
       status: string;
       ref_id: string | null;
+      is_sandbox: number;
     }>(
       'SELECT * FROM payment_intents WHERE gateway_provider = ? AND authority = ?',
       this.gateway.name,
@@ -245,7 +297,7 @@ export class PaymentsService {
         requestId: intent.request_id,
         refId: intent.ref_id,
         amountToman: intent.amount_toman,
-        isSandbox: this.gateway.isSandbox,
+        isSandbox: intent.is_sandbox === 1,
       };
     }
 
@@ -291,7 +343,7 @@ export class PaymentsService {
         errorCode: verification.errorCode ?? 'PAYMENT_FAILED',
         errorMessage:
           verification.errorMessage ?? 'پرداخت توسط بانک تأیید نشد.',
-        isSandbox: this.gateway.isSandbox,
+        isSandbox: intent.is_sandbox === 1,
       };
     }
 
@@ -350,13 +402,18 @@ export class PaymentsService {
     });
 
     if (!txOutcome.alreadyProcessedRace) {
+      const isSandboxPayment = intent.is_sandbox === 1;
       await this.notifications.notifyUser({
         userId: intent.customer_user_id,
         requestId: intent.request_id,
-        eventType: 'PAYMENT_VERIFIED',
-        title: 'پرداخت صورتحساب تأیید شد',
-        body: `پرداخت مبلغ ${intent.amount_toman.toLocaleString('fa-IR')} تومان با کد رهگیری ${verification.refId} تأیید شد.`,
-        sendSms: true,
+        eventType: isSandboxPayment ? 'PAYMENT_SANDBOX_VERIFIED' : 'PAYMENT_VERIFIED',
+        title: isSandboxPayment
+          ? 'پرداخت شبیه‌سازی‌شده تأیید شد'
+          : 'پرداخت صورتحساب تأیید شد',
+        body: isSandboxPayment
+          ? `تراکنش ${intent.amount_toman.toLocaleString('fa-IR')} تومان فقط در Sandbox شبیه‌سازی شد؛ هیچ وجه واقعی بانکی جابه‌جا نشده است.`
+          : `پرداخت مبلغ ${intent.amount_toman.toLocaleString('fa-IR')} تومان با کد رهگیری ${verification.refId} توسط درگاه تأیید شد.`,
+        sendSms: !isSandboxPayment,
         dedupBaseKey: `paid:${intent.id}`,
       });
     }
@@ -367,148 +424,30 @@ export class PaymentsService {
       requestId: intent.request_id,
       refId: verification.refId,
       amountToman: intent.amount_toman,
-      isSandbox: this.gateway.isSandbox,
+      isSandbox: intent.is_sandbox === 1,
     };
   }
 
   /**
-   * بازپرداخت کامل یا جزئی (Refund) با برگشت حسابداری متناظر و ثبت ممیزی مدیریت
+   * بازپرداخت در این نسخه fail-closed است: تا اتصال و آزمون provider بازپرداخت واقعی،
+   * هیچ وضعیت، فاکتور، دفترکل یا اعلان مشتری تغییر نمی‌کند.
    */
-  async processRefund(params: {
+  async processRefund(_params: {
     requestId: number;
     amountToman: number;
     reason: string;
     adminUserId: number;
     ipAddress?: string;
-  }) {
-    const intent = this.db.get<{
-      id: number;
-      request_id: number;
-      customer_user_id: number;
-      amount_toman: number;
-      status: string;
-    }>(
-      `SELECT * FROM payment_intents
-       WHERE request_id = ? AND status IN ('verified', 'partially_refunded')
-       ORDER BY id DESC LIMIT 1`,
-      params.requestId
+  }): Promise<never> {
+    throw new AppError(
+      503,
+      'REFUND_PROVIDER_UNAVAILABLE',
+      'بازپرداخت خودکار در این نسخه پیاده‌سازی و راستی‌آزمایی نشده است؛ هیچ وجه یا وضعیت مالی تغییر نکرد. بازپرداخت را فقط از مسیر مالی خارج از سامانه و با سند بانکی معتبر پیگیری کنید.'
     );
-
-    if (!intent) {
-      throw new AppError(
-        404,
-        'PAID_TRANSACTION_NOT_FOUND',
-        'تراکنش پرداخت‌شده معتبری برای این مأموریت یافت نشد.'
-      );
-    }
-
-    const refundedSoFarRow = this.db.get<{ total: number }>(
-      `SELECT COALESCE(SUM(amount_toman), 0) AS total
-       FROM refunds WHERE payment_intent_id = ? AND status = 'completed'`,
-      intent.id
-    );
-    const refundedSoFar = Number(refundedSoFarRow?.total ?? 0);
-    const maxRefundable = intent.amount_toman - refundedSoFar;
-
-    const refundToman = Math.round(params.amountToman);
-    if (refundToman <= 0 || refundToman > maxRefundable) {
-      throw new AppError(
-        422,
-        'INVALID_REFUND_AMOUNT',
-        `مبلغ بازپرداخت باید بین ۱ تا حداکثر ${maxRefundable.toLocaleString('fa-IR')} تومان باشد.`
-      );
-    }
-
-    const isFullRefund = refundedSoFar + refundToman === intent.amount_toman;
-    const nowIso = new Date().toISOString();
-
-    const refundId = this.db.transaction(() => {
-      const res = this.db.run(
-        `INSERT INTO refunds (
-          payment_intent_id, request_id, amount_toman, reason, approved_by_admin_id, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, 'completed', ?)`,
-        intent.id,
-        intent.request_id,
-        refundToman,
-        params.reason.trim(),
-        params.adminUserId,
-        nowIso
-      );
-
-      this.db.run(
-        `UPDATE payment_intents SET status = ?, updated_at = ? WHERE id = ?`,
-        isFullRefund ? 'refunded' : 'partially_refunded',
-        nowIso,
-        intent.id
-      );
-
-      this.db.run(
-        `UPDATE service_requests SET payment_status = ?, updated_at = ? WHERE id = ?`,
-        isFullRefund ? 'refunded' : 'partially_refunded',
-        nowIso,
-        intent.request_id
-      );
-
-      const invoice = this.db.get<{
-        id: number;
-        total_toman: number;
-        responder_id: number | null;
-        responder_net_toman: number;
-      }>('SELECT * FROM invoices WHERE request_id = ?', intent.request_id);
-
-      if (invoice) {
-        if (isFullRefund) {
-          this.db.run(`UPDATE invoices SET status = 'refunded' WHERE id = ?`, invoice.id);
-        }
-
-        // کسر متناسب از دفتر کل امدادگر در صورت ثبت قبلی درآمد
-        if (invoice.responder_id && invoice.total_toman > 0) {
-          const reversalRatio = refundToman / invoice.total_toman;
-          const responderDeduction = Math.round(
-            invoice.responder_net_toman * reversalRatio
-          );
-          if (responderDeduction > 0) {
-            this.appendLedgerEntry({
-              responderId: invoice.responder_id,
-              requestId: intent.request_id,
-              refundId: res.lastInsertRowid,
-              entryType: 'refund_reversal',
-              amountToman: -responderDeduction,
-              description: `اصلاح حساب بابت بازپرداخت به مشتری (${params.reason.trim()})`,
-            });
-          }
-        }
-      }
-
-      this.audit.logAdminAction({
-        actorUserId: params.adminUserId,
-        actorRole: 'admin',
-        action: 'PAYMENT_REFUNDED',
-        entityType: 'refund',
-        entityId: res.lastInsertRowid,
-        summary: `بازپرداخت ${refundToman.toLocaleString('fa-IR')} تومان برای مأموریت #${intent.request_id}`,
-        metadata: { reason: params.reason, isFullRefund },
-        ipAddress: params.ipAddress,
-      });
-
-      return res.lastInsertRowid;
-    });
-
-    await this.notifications.notifyUser({
-      userId: intent.customer_user_id,
-      requestId: intent.request_id,
-      eventType: 'PAYMENT_REFUNDED',
-      title: 'بازپرداخت وجه ثبت شد',
-      body: `مبلغ ${refundToman.toLocaleString('fa-IR')} تومان بابت مأموریت #${intent.request_id} بازپرداخت شد.`,
-      sendSms: true,
-      dedupBaseKey: `refund:${refundId}`,
-    });
-
-    return { refundId, refundToman, isFullRefund };
   }
 
   /**
-   * ثبت وضعیت بدهی مجاز (Approved Post-Pay Debt) در شرایط خاص جاده‌ای با مجوز اپراتور/مدیر
+   * ثبت بدهی مجاز فقط برای خدمت تکمیل‌شده و فاکتور صادرشده؛ این مسیر وجهی دریافت نمی‌کند.
    */
   approveEmergencyDebt(params: {
     requestId: number;
@@ -516,29 +455,91 @@ export class PaymentsService {
     actorRole: 'operator' | 'admin';
     reason: string;
   }) {
-    const setting = this.db.get<{ value_json: string }>(
-      `SELECT value_json FROM system_settings WHERE key = 'allow_postpay_debt'`
-    );
-    const allowed = setting ? Boolean(JSON.parse(setting.value_json)) : false;
-    if (!allowed) {
+    if (!this.isPostpayDebtEnabled()) {
       throw new AppError(
         403,
         'POSTPAY_DEBT_DISABLED',
-        'امکان ثبت بدهی مجاز در تنظیمات سامانه غیرفعال است.'
+        'قابلیت ثبت بدهی پس‌پرداخت در پیکربندی سرور یا تنظیمات سامانه غیرفعال است.'
       );
     }
 
+    const reason = params.reason.trim();
+    if (reason.length < 5) {
+      throw new AppError(400, 'DEBT_REASON_REQUIRED', 'ثبت دلیل معتبر برای بدهی الزامی است.');
+    }
+
     const nowIso = new Date().toISOString();
-    this.db.transaction(() => {
-      this.db.run(
-        `UPDATE service_requests SET payment_status = 'approved_debt', updated_at = ? WHERE id = ?`,
+    const amountToman = this.db.transaction(() => {
+      const requestRow = this.db.get<{
+        id: number;
+        status: string;
+        payment_status: string;
+      }>(
+        'SELECT id, status, payment_status FROM service_requests WHERE id = ?',
+        params.requestId
+      );
+      if (!requestRow) {
+        throw new AppError(404, 'REQUEST_NOT_FOUND', 'درخواست یافت نشد.');
+      }
+      if (requestRow.status !== 'Completed') {
+        throw new AppError(
+          409,
+          'DEBT_REQUIRES_COMPLETED_SERVICE',
+          'ثبت بدهی فقط پس از تکمیل خدمت و صدور صورتحساب مجاز است.'
+        );
+      }
+      const pendingIntent = this.db.get<{ id: number }>(
+        `SELECT id FROM payment_intents WHERE request_id = ? AND status = 'pending' LIMIT 1`,
+        params.requestId
+      );
+      if (pendingIntent) {
+        throw new AppError(
+          409,
+          'PAYMENT_ATTEMPT_IN_PROGRESS',
+          'برای این مأموریت سفارش پرداخت درحال‌پردازش وجود دارد؛ ابتدا نتیجه درگاه را تعیین تکلیف کنید.'
+        );
+      }
+      if (!['unpaid', 'failed'].includes(requestRow.payment_status)) {
+        throw new AppError(
+          409,
+          'DEBT_NOT_ELIGIBLE',
+          'وضعیت فعلی پرداخت برای ثبت بدهی مجاز نیست؛ تراکنش ناموفق یا وضعیت نهایی را بررسی کنید.'
+        );
+      }
+
+      const invoice = this.db.get<{
+        id: number;
+        total_toman: number;
+        status: string;
+      }>('SELECT id, total_toman, status FROM invoices WHERE request_id = ?', params.requestId);
+      if (!invoice || invoice.status !== 'issued') {
+        throw new AppError(
+          409,
+          'ISSUED_INVOICE_REQUIRED',
+          'برای ثبت بدهی، فاکتور صادرشده و پرداخت‌نشده لازم است.'
+        );
+      }
+
+      const requestUpdate = this.db.run(
+        `UPDATE service_requests
+         SET payment_status = 'approved_debt', updated_at = ?
+         WHERE id = ? AND status = 'Completed' AND payment_status IN ('unpaid', 'failed')`,
         nowIso,
         params.requestId
       );
-      this.db.run(
-        `UPDATE invoices SET status = 'approved_debt' WHERE request_id = ?`,
-        params.requestId
+      if (requestUpdate.changes !== 1) {
+        throw new AppError(409, 'DEBT_NOT_ELIGIBLE', 'وضعیت مأموریت هم‌زمان تغییر کرده است.');
+      }
+
+      const invoiceUpdate = this.db.run(
+        `UPDATE invoices SET status = 'approved_debt'
+         WHERE id = ? AND status = 'issued'`,
+        invoice.id
       );
+      if (invoiceUpdate.changes !== 1) {
+        throw new AppError(409, 'DEBT_NOT_ELIGIBLE', 'وضعیت فاکتور هم‌زمان تغییر کرده است.');
+      }
+
       this.audit.logAdminAction({
         actorUserId: params.actorUserId,
         actorRole: params.actorRole,
@@ -546,11 +547,17 @@ export class PaymentsService {
         entityType: 'service_request',
         entityId: params.requestId,
         summary: `ثبت بدهی مجاز برای مأموریت #${params.requestId}`,
-        metadata: { reason: params.reason },
+        metadata: { reason, amountToman: invoice.total_toman, paymentReceived: false },
       });
+      return invoice.total_toman;
     });
 
-    return { ok: true };
+    return {
+      ok: true,
+      paymentStatus: 'approved_debt',
+      amountToman,
+      paymentReceived: false,
+    };
   }
 
   /**
@@ -566,6 +573,10 @@ export class PaymentsService {
     }
 
     const balanceToman = this.getCurrentWalletBalance(responder.id);
+    const eligibleForSettlementToman = this.getEligibleSettlementBalance(
+      responder.id,
+      this.gateway.isSandbox
+    );
     const ledger = this.db.all(
       'SELECT * FROM wallet_ledger_entries WHERE responder_id = ? ORDER BY id DESC LIMIT 50',
       responder.id
@@ -579,6 +590,8 @@ export class PaymentsService {
       responderId: responder.id,
       shebaNumber: responder.sheba_number,
       balanceToman,
+      eligibleForSettlementToman,
+      settlementMode: this.gateway.isSandbox ? 'sandbox_simulated' : 'manual_external',
       ledger,
       settlements,
     };
@@ -622,17 +635,32 @@ export class PaymentsService {
         throw new AppError(
           422,
           'INSUFFICIENT_WALLET_BALANCE',
-          `موجودی قابل برداشت شما (${balance.toLocaleString('fa-IR')} تومان) کمتر از مبلغ درخواستی است.`
+          `موجودی دفترکل شما (${balance.toLocaleString('fa-IR')} تومان) کمتر از مبلغ درخواستی است.`
+        );
+      }
+
+      const executionMode = this.gateway.isSandbox ? 'sandbox_simulated' : 'manual_external';
+      const eligibleBalance = this.getEligibleSettlementBalance(
+        responder.id,
+        this.gateway.isSandbox
+      );
+      if (reqAmount > eligibleBalance) {
+        throw new AppError(
+          422,
+          'INSUFFICIENT_VERIFIED_WALLET_BALANCE',
+          `موجودی واجد شرایطِ متصل به فاکتور و پرداخت تأییدشده در این حالت (${eligibleBalance.toLocaleString('fa-IR')} تومان) کمتر از مبلغ درخواستی است.`
         );
       }
 
       const nowIso = new Date().toISOString();
       const setRes = this.db.run(
-        `INSERT INTO settlements (responder_id, amount_toman, sheba_number, status, created_at)
-         VALUES (?, ?, ?, 'requested', ?)`,
+        `INSERT INTO settlements (
+          responder_id, amount_toman, sheba_number, status, execution_mode, created_at
+        ) VALUES (?, ?, ?, 'requested', ?, ?)`,
         responder.id,
         reqAmount,
         sheba,
+        executionMode,
         nowIso
       );
 
@@ -648,6 +676,8 @@ export class PaymentsService {
         settlementId: setRes.lastInsertRowid,
         amountToman: reqAmount,
         remainingBalanceToman: balance - reqAmount,
+        executionMode,
+        simulationOnly: executionMode === 'sandbox_simulated',
       };
     });
   }
@@ -657,6 +687,7 @@ export class PaymentsService {
     decision: 'approved_paid' | 'rejected';
     bankReferenceCode?: string;
     note?: string;
+    externalTransferConfirmed?: boolean;
     adminUserId: number;
   }) {
     return this.db.transaction(() => {
@@ -665,6 +696,7 @@ export class PaymentsService {
         responder_id: number;
         amount_toman: number;
         status: string;
+        execution_mode: string;
       }>('SELECT * FROM settlements WHERE id = ?', params.settlementId);
 
       if (!settlement) {
@@ -678,29 +710,72 @@ export class PaymentsService {
         );
       }
 
+      const expectedMode = this.gateway.isSandbox ? 'sandbox_simulated' : 'manual_external';
       if (
         params.decision === 'approved_paid' &&
-        (!params.bankReferenceCode || params.bankReferenceCode.trim().length < 4)
+        settlement.execution_mode !== expectedMode
       ) {
         throw new AppError(
-          400,
-          'BANK_REF_REQUIRED',
-          'ثبت شناسه مرجع پایا/ساتنا برای تأیید واریز تسویه‌حساب الزامی است.'
+          409,
+          'SETTLEMENT_MODE_UNVERIFIED',
+          'روش اجرای این درخواست تسویه قدیمی یا نامشخص است؛ تا تعیین مسیر واقعی انتقال وجه آن را تأیید نکنید.'
         );
       }
 
+      const note = params.note?.trim() ?? '';
+      const bankReferenceCode = params.bankReferenceCode?.trim() ?? '';
+      if (params.decision === 'rejected' && note.length < 5) {
+        throw new AppError(400, 'SETTLEMENT_NOTE_REQUIRED', 'ثبت دلیل معتبر برای رد تسویه الزامی است.');
+      }
+
+      if (params.decision === 'approved_paid' && settlement.execution_mode === 'manual_external') {
+        if (bankReferenceCode.length < 4) {
+          throw new AppError(
+            400,
+            'BANK_REF_REQUIRED',
+            'شناسه مرجع را دقیقاً از رسید بانکی واقعی وارد کنید؛ سامانه قالب یا اصالت آن را با بانک راستی‌آزمایی نمی‌کند.'
+          );
+        }
+        if (note.length < 5) {
+          throw new AppError(
+            400,
+            'SETTLEMENT_NOTE_REQUIRED',
+            'برای ثبت تسویه دستی، یادداشت ممیزی واقعی الزامی است.'
+          );
+        }
+        if (params.externalTransferConfirmed !== true) {
+          throw new AppError(
+            409,
+            'EXTERNAL_TRANSFER_CONFIRMATION_REQUIRED',
+            'پیش از ثبت، انتقال بانکی را خارج از سامانه انجام دهید و تأیید صریح مشاهده رسید را ثبت کنید.'
+          );
+        }
+      }
+
+      const storedReference =
+        params.decision === 'approved_paid' && settlement.execution_mode === 'manual_external'
+          ? bankReferenceCode
+          : null;
+      const storedNote =
+        note ||
+        (settlement.execution_mode === 'sandbox_simulated'
+          ? 'Sandbox: شبیه‌سازی داخلی؛ وجه واقعی جابه‌جا نشد.'
+          : null);
       const nowIso = new Date().toISOString();
-      this.db.run(
+      const update = this.db.run(
         `UPDATE settlements
          SET status = ?, bank_reference_code = ?, processed_by_admin_id = ?, note = ?, processed_at = ?
-         WHERE id = ?`,
+         WHERE id = ? AND status = 'requested'`,
         params.decision,
-        params.bankReferenceCode?.trim() || null,
+        storedReference,
         params.adminUserId,
-        params.note?.trim() || null,
+        storedNote,
         nowIso,
         settlement.id
       );
+      if (update.changes !== 1) {
+        throw new AppError(409, 'SETTLEMENT_ALREADY_PROCESSED', 'این درخواست تسویه هم‌زمان پردازش شده است.');
+      }
 
       if (params.decision === 'rejected') {
         this.appendLedgerEntry({
@@ -712,22 +787,54 @@ export class PaymentsService {
         });
       }
 
+      const simulationOnly =
+        params.decision === 'approved_paid' &&
+        settlement.execution_mode === 'sandbox_simulated';
       this.audit.logAdminAction({
         actorUserId: params.adminUserId,
         actorRole: 'admin',
-        action: `SETTLEMENT_${params.decision.toUpperCase()}`,
+        action:
+          params.decision === 'rejected'
+            ? 'SETTLEMENT_REJECTED'
+            : simulationOnly
+              ? 'SETTLEMENT_SIMULATED_APPROVED'
+              : 'SETTLEMENT_MANUALLY_ATTESTED_APPROVED',
         entityType: 'settlement',
         entityId: settlement.id,
-        summary: `تعیین وضعیت تسویه‌حساب #${settlement.id} (${settlement.amount_toman} تومان): ${params.decision}`,
+        summary:
+          params.decision === 'rejected'
+            ? `رد درخواست تسویه #${settlement.id} (${settlement.amount_toman} تومان) و برگشت به کیف پول.`
+            : simulationOnly
+              ? `شبیه‌سازی تسویه #${settlement.id} (${settlement.amount_toman} تومان)؛ وجه واقعی جابه‌جا نشد.`
+              : `ثبت دستی وضعیت تسویه #${settlement.id} (${settlement.amount_toman} تومان) بر اساس تأیید مدیر؛ اتصال/استعلام بانکی خودکار وجود ندارد.`,
+        metadata: {
+          executionMode: settlement.execution_mode,
+          bankReferenceCode: storedReference,
+          externalTransferConfirmed: params.externalTransferConfirmed === true,
+          bankTransferVerifiedByProvider: false,
+        },
       });
 
-      return { settlementId: settlement.id, status: params.decision };
+      return {
+        settlementId: settlement.id,
+        status: params.decision,
+        executionMode: settlement.execution_mode,
+        simulationOnly,
+        payoutExecutedByPlatform: false,
+        bankTransferVerifiedByProvider: false,
+      };
     });
   }
 
   listCustomerInvoicesAndPayments(customerUserId: number) {
     const invoices = this.db.all(
-      `SELECT i.*, r.tracking_code, s.title_fa AS service_title
+      `SELECT i.*, r.tracking_code, s.title_fa AS service_title,
+         (SELECT p.is_sandbox FROM payment_intents p
+          WHERE p.request_id = i.request_id AND p.status IN ('verified', 'refunded', 'partially_refunded')
+          ORDER BY p.id DESC LIMIT 1) AS payment_is_sandbox,
+         (SELECT COUNT(*) FROM refunds f
+          WHERE f.request_id = i.request_id AND f.status = 'completed'
+            AND f.verification_mode = 'provider_verified') AS provider_verified_refunds_count
        FROM invoices i
        JOIN service_requests r ON r.id = i.request_id
        JOIN service_catalog s ON s.id = r.service_id
@@ -747,19 +854,37 @@ export class PaymentsService {
   }
 
   /**
-   * گزارش جامع مالی و تطبیق تراکنش‌ها (Reconciliation) برای مدیر کل
+   * گزارش تطبیق مالی؛ Sandbox و رکوردهای تاریخیِ راستی‌آزمایی‌نشده جدا از جمع‌های اصلی‌اند.
    */
   getFinancialReconciliationReport() {
+    const paidStatuses = "('verified', 'refunded', 'partially_refunded')";
     const grossVerifiedRow = this.db.get<{ total: number; cnt: number }>(
       `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
-       FROM payment_intents WHERE status IN ('verified', 'refunded', 'partially_refunded')`
+       FROM payment_intents
+       WHERE is_sandbox = 0 AND status IN ${paidStatuses}`
+    );
+    const sandboxPaymentsRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM payment_intents
+       WHERE is_sandbox = 1 AND status IN ${paidStatuses}`
     );
     const refundsRow = this.db.get<{ total: number; cnt: number }>(
       `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
-       FROM refunds WHERE status = 'completed'`
+       FROM refunds WHERE status = 'completed' AND verification_mode = 'provider_verified'`
+    );
+    const sandboxRefundsRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM refunds WHERE status = 'completed' AND verification_mode = 'sandbox_simulated'`
+    );
+    const legacyRefundsRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM refunds WHERE status = 'completed' AND verification_mode = 'legacy_unverified'`
     );
     const failedPaymentsRow = this.db.get<{ cnt: number }>(
-      `SELECT COUNT(*) AS cnt FROM payment_intents WHERE status = 'failed'`
+      `SELECT COUNT(*) AS cnt FROM payment_intents WHERE status = 'failed' AND is_sandbox = 0`
+    );
+    const sandboxFailedPaymentsRow = this.db.get<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM payment_intents WHERE status = 'failed' AND is_sandbox = 1`
     );
     const paidInvoicesRow = this.db.get<{
       commission_total: number;
@@ -767,18 +892,57 @@ export class PaymentsService {
       responder_net_total: number;
     }>(
       `SELECT
-         COALESCE(SUM(platform_commission_toman), 0) AS commission_total,
-         COALESCE(SUM(tax_toman), 0) AS tax_total,
-         COALESCE(SUM(responder_net_toman), 0) AS responder_net_total
-       FROM invoices WHERE status IN ('paid', 'refunded')`
+         COALESCE(SUM(i.platform_commission_toman), 0) AS commission_total,
+         COALESCE(SUM(i.tax_toman), 0) AS tax_total,
+         COALESCE(SUM(i.responder_net_toman), 0) AS responder_net_total
+       FROM invoices i
+       WHERE i.status IN ('paid', 'refunded')
+         AND EXISTS (
+           SELECT 1 FROM payment_intents p
+           WHERE p.request_id = i.request_id AND p.is_sandbox = 0
+             AND p.status IN ${paidStatuses}
+         )`
     );
-    const settlementsPaidRow = this.db.get<{ total: number }>(
-      `SELECT COALESCE(SUM(amount_toman), 0) AS total
-       FROM settlements WHERE status = 'approved_paid'`
+    const sandboxPaidInvoicesRow = this.db.get<{
+      commission_total: number;
+      tax_total: number;
+      responder_net_total: number;
+    }>(
+      `SELECT
+         COALESCE(SUM(i.platform_commission_toman), 0) AS commission_total,
+         COALESCE(SUM(i.tax_toman), 0) AS tax_total,
+         COALESCE(SUM(i.responder_net_toman), 0) AS responder_net_total
+       FROM invoices i
+       WHERE i.status IN ('paid', 'refunded')
+         AND EXISTS (
+           SELECT 1 FROM payment_intents p
+           WHERE p.request_id = i.request_id AND p.is_sandbox = 1
+             AND p.status IN ${paidStatuses}
+         )`
     );
-    const settlementsPendingRow = this.db.get<{ total: number }>(
-      `SELECT COALESCE(SUM(amount_toman), 0) AS total
-       FROM settlements WHERE status = 'requested'`
+    const settlementsPaidRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'approved_paid' AND execution_mode = 'manual_external'`
+    );
+    const settlementsPendingRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'requested' AND execution_mode = 'manual_external'`
+    );
+    const sandboxSettlementsPaidRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'approved_paid' AND execution_mode = 'sandbox_simulated'`
+    );
+    const sandboxSettlementsPendingRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'requested' AND execution_mode = 'sandbox_simulated'`
+    );
+    const legacySettlementsPaidRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'approved_paid' AND execution_mode = 'legacy_unverified'`
+    );
+    const legacySettlementsPendingRow = this.db.get<{ total: number; cnt: number }>(
+      `SELECT COALESCE(SUM(amount_toman), 0) AS total, COUNT(*) AS cnt
+       FROM settlements WHERE status = 'requested' AND execution_mode = 'legacy_unverified'`
     );
 
     const grossVerifiedToman = Number(grossVerifiedRow?.total ?? 0);
@@ -813,11 +977,33 @@ export class PaymentsService {
         failedPaymentsCount: Number(failedPaymentsRow?.cnt ?? 0),
         platformCommissionToman: Number(paidInvoicesRow?.commission_total ?? 0),
         collectedTaxToman: Number(paidInvoicesRow?.tax_total ?? 0),
-        responderGrossAllocatedToman: Number(
-          paidInvoicesRow?.responder_net_total ?? 0
-        ),
+        responderGrossAllocatedToman: Number(paidInvoicesRow?.responder_net_total ?? 0),
         settlementsPaidToman: Number(settlementsPaidRow?.total ?? 0),
+        settlementsPaidCount: Number(settlementsPaidRow?.cnt ?? 0),
         settlementsPendingToman: Number(settlementsPendingRow?.total ?? 0),
+        settlementsPendingCount: Number(settlementsPendingRow?.cnt ?? 0),
+      },
+      sandbox: {
+        grossPaymentsToman: Number(sandboxPaymentsRow?.total ?? 0),
+        verifiedPaymentsCount: Number(sandboxPaymentsRow?.cnt ?? 0),
+        refundsToman: Number(sandboxRefundsRow?.total ?? 0),
+        refundsCount: Number(sandboxRefundsRow?.cnt ?? 0),
+        failedPaymentsCount: Number(sandboxFailedPaymentsRow?.cnt ?? 0),
+        platformCommissionToman: Number(sandboxPaidInvoicesRow?.commission_total ?? 0),
+        collectedTaxToman: Number(sandboxPaidInvoicesRow?.tax_total ?? 0),
+        responderGrossAllocatedToman: Number(sandboxPaidInvoicesRow?.responder_net_total ?? 0),
+        settlementsPaidToman: Number(sandboxSettlementsPaidRow?.total ?? 0),
+        settlementsPaidCount: Number(sandboxSettlementsPaidRow?.cnt ?? 0),
+        settlementsPendingToman: Number(sandboxSettlementsPendingRow?.total ?? 0),
+        settlementsPendingCount: Number(sandboxSettlementsPendingRow?.cnt ?? 0),
+      },
+      excludedUnverified: {
+        legacyRefundsToman: Number(legacyRefundsRow?.total ?? 0),
+        legacyRefundsCount: Number(legacyRefundsRow?.cnt ?? 0),
+        legacySettlementsPaidToman: Number(legacySettlementsPaidRow?.total ?? 0),
+        legacySettlementsPaidCount: Number(legacySettlementsPaidRow?.cnt ?? 0),
+        legacySettlementsPendingToman: Number(legacySettlementsPendingRow?.total ?? 0),
+        legacySettlementsPendingCount: Number(legacySettlementsPendingRow?.cnt ?? 0),
       },
       recentTransactions,
       settlements,

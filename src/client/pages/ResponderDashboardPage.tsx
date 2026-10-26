@@ -92,6 +92,8 @@ export function ResponderDashboardPage() {
   const [missions, setMissions] = useState<ResponderMissionItem[]>([]);
   const [walletData, setWalletData] = useState<{
     balanceToman: number;
+    eligibleForSettlementToman: number;
+    settlementMode: string;
     ledger: Array<{
       id: number;
       entry_type: string;
@@ -105,6 +107,7 @@ export function ResponderDashboardPage() {
       amount_toman: number;
       sheba_number: string;
       status: string;
+      execution_mode: string;
       bank_reference_code: string | null;
       created_at: string;
     }>;
@@ -154,6 +157,8 @@ export function ResponderDashboardPage() {
         ),
         apiFetch<{
           balanceToman: number;
+          eligibleForSettlementToman: number;
+          settlementMode: string;
           ledger: Array<{
             id: number;
             entry_type: string;
@@ -167,6 +172,7 @@ export function ResponderDashboardPage() {
             amount_toman: number;
             sheba_number: string;
             status: string;
+            execution_mode: string;
             bank_reference_code: string | null;
             created_at: string;
           }>;
@@ -429,13 +435,17 @@ export function ResponderDashboardPage() {
   const handleRequestSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiFetch('/api/payments/responder/settlements', {
+      const response = await apiFetch<{
+        result: { executionMode: string; simulationOnly: boolean };
+      }>('/api/payments/responder/settlements', {
         method: 'POST',
         body: JSON.stringify({ amountToman: settlementAmount }),
       });
       setFeedback({
-        type: 'ok',
-        text: 'درخواست تسویه‌حساب به شبا ثبت شد و در صف پرداخت مالی قرار گرفت.',
+        type: response.result.simulationOnly ? 'err' : 'ok',
+        text: response.result.simulationOnly
+          ? 'فقط درخواست شبیه‌سازی‌شده Sandbox ثبت شد؛ هیچ وجه بانکی جابه‌جا نشده است.'
+          : 'درخواست ثبت شد؛ این سامانه وجه را منتقل نمی‌کند و پرداخت فقط پس از تأیید دستی مستند ثبت می‌شود.',
       });
       await loadResponderData();
     } catch (err) {
@@ -909,9 +919,18 @@ export function ResponderDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 space-y-4 text-xs">
             <div className="bg-slate-900 text-white rounded-xl p-4 space-y-1">
-              <div className="text-slate-300">موجودی قابل تسویه کیف پول:</div>
-              <div className="text-2xl font-black text-amber-400">
+              <div className="text-slate-300">ماندهٔ دفترکل (به‌تنهایی به معنی وجه بانکی نیست):</div>
+              <div className="text-2xl font-black text-slate-100">
                 {formatToman(walletData.balanceToman)}
+              </div>
+              <div className="text-amber-300 mt-2">واجد شرایط درخواست تسویه در این حالت:</div>
+              <div className="text-xl font-black text-amber-400">
+                {formatToman(walletData.eligibleForSettlementToman)}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                {walletData.settlementMode === 'sandbox_simulated'
+                  ? 'Sandbox: عدد شبیه‌سازی است؛ پول واقعی جابه‌جا نمی‌شود.'
+                  : 'انتقال بانکی خودکار نیست؛ ثبت پرداخت نیازمند رسید و تأیید مدیر است.'}
               </div>
               <div className="text-[11px] text-slate-400 dir-ltr text-left">
                 {profile?.shebaNumber || 'شماره شبا ثبت نشده است'}
@@ -920,8 +939,11 @@ export function ResponderDashboardPage() {
 
             <form onSubmit={handleRequestSettlement} className="space-y-3">
               <h3 className="font-extrabold text-sm text-slate-900">
-                ثبت درخواست تسویه‌حساب بانکی (پایا)
+                ثبت درخواست تسویهٔ شبا (نه انتقال بانکی)
               </h3>
+              <p className="rounded-lg bg-amber-50 p-2 text-amber-950">
+                ثبت درخواست به معنی واریز نیست؛ انتقال بانکی خودکار نداریم. در Sandbox هیچ وجه واقعی جابه‌جا نمی‌شود.
+              </p>
               <div>
                 <label className="font-bold block mb-1">
                   مبلغ درخواستی تسویه (حداقل ۵۰,۰۰۰ تومان)
@@ -929,6 +951,7 @@ export function ResponderDashboardPage() {
                 <input
                   type="number"
                   min={50000}
+                  max={walletData.eligibleForSettlementToman}
                   step={10000}
                   value={settlementAmount}
                   onChange={(e) => setSettlementAmount(Number(e.target.value))}
@@ -937,9 +960,10 @@ export function ResponderDashboardPage() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 rounded-xl"
+                disabled={walletData.eligibleForSettlementToman < 50000}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold py-2.5 rounded-xl"
               >
-                ثبت درخواست واریز به شبا
+                ثبت درخواست تسویه (واریز خودکار انجام نمی‌شود)
               </button>
             </form>
 
@@ -963,9 +987,17 @@ export function ResponderDashboardPage() {
                       className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${getStatusBadgeClass(st.status)}`}
                     >
                       {st.status === 'approved_paid'
-                        ? 'واریزشده'
+                        ? st.execution_mode === 'sandbox_simulated'
+                          ? 'Sandbox؛ وجه واقعی جابه‌جا نشده'
+                          : st.execution_mode === 'manual_external'
+                            ? 'ثبت دستی مدیر؛ استعلام بانکی نشده'
+                            : 'ثبت قدیمی؛ راستی‌آزمایی‌نشده'
                         : st.status === 'requested'
-                          ? 'در انتظار واریز'
+                          ? st.execution_mode === 'sandbox_simulated'
+                            ? 'درخواست Sandbox؛ بدون وجه واقعی'
+                            : st.execution_mode === 'manual_external'
+                              ? 'در انتظار رسیدگی دستی'
+                              : 'در انتظار تعیین مسیر؛ قدیمی/نامشخص'
                           : 'ردشده'}
                     </span>
                   </div>

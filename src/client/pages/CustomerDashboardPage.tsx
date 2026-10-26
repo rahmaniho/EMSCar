@@ -31,6 +31,7 @@ interface RequestSummary {
   statusLabel: string;
   paymentStatus: string;
   paymentStatusLabel: string;
+  paymentIsSandbox: boolean;
   serviceTitle: string;
   zoneName: string;
   vehicleSummary: string;
@@ -57,6 +58,40 @@ interface InvoiceRecord {
   total_toman: number;
   status: string;
   issued_at: string;
+  payment_is_sandbox?: number | null;
+  provider_verified_refunds_count?: number;
+}
+
+function isUnverifiedInvoicePayment(invoice: InvoiceRecord): boolean {
+  if (invoice.status === 'paid') return invoice.payment_is_sandbox == null;
+  if (['refunded', 'partially_refunded'].includes(invoice.status)) {
+    return Number(invoice.provider_verified_refunds_count ?? 0) === 0;
+  }
+  return false;
+}
+
+function getInvoiceStatusLabel(invoice: InvoiceRecord): string {
+  if (Number(invoice.payment_is_sandbox) === 1) {
+    return 'پرداخت شبیه‌سازی‌شده (Sandbox)؛ وجه واقعی جابه‌جا نشده';
+  }
+  if (invoice.status === 'paid') {
+    return invoice.payment_is_sandbox === 0
+      ? 'پرداخت‌شده (تأیید سمت سرور)'
+      : 'وضعیت پرداخت قدیمی/بدون مدرک provider';
+  }
+  if (['refunded', 'partially_refunded'].includes(invoice.status)) {
+    if (isUnverifiedInvoicePayment(invoice)) {
+      return 'بازپرداخت قدیمی/راستی‌آزمایی‌نشده';
+    }
+    return invoice.status === 'refunded'
+      ? 'وضعیت بازپرداخت ثبت‌شده؛ مبلغ نیازمند تطبیق'
+      : 'وضعیت بازپرداخت جزئی ثبت‌شده؛ مبلغ نیازمند تطبیق';
+  }
+  if (invoice.status === 'approved_debt') {
+    return 'بدهی ثبت‌شده؛ وجه دریافت نشده';
+  }
+  if (invoice.status === 'issued') return 'صادرشده؛ در انتظار پرداخت';
+  return invoice.status;
 }
 
 export function CustomerDashboardPage() {
@@ -271,7 +306,11 @@ export function CustomerDashboardPage() {
                             {r.statusLabel}
                           </span>
                           <span
-                            className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${getStatusBadgeClass(r.paymentStatus)}`}
+                            className={`px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${
+                              r.paymentIsSandbox || r.paymentStatusLabel.includes('راستی‌آزمایی') || r.paymentStatusLabel.includes('بدون مدرک')
+                                ? getStatusBadgeClass('pending_gateway')
+                                : getStatusBadgeClass(r.paymentStatus)
+                            }`}
                           >
                             {r.paymentStatusLabel}
                           </span>
@@ -444,9 +483,13 @@ export function CustomerDashboardPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full border font-bold ${getStatusBadgeClass(inv.status)}`}
+                          className={`px-2.5 py-0.5 rounded-full border font-bold ${
+                            Number(inv.payment_is_sandbox) === 1 || isUnverifiedInvoicePayment(inv)
+                              ? getStatusBadgeClass('pending_gateway')
+                              : getStatusBadgeClass(inv.status)
+                          }`}
                         >
-                          {inv.status === 'paid' ? 'پرداخت‌شده' : inv.status}
+                          {getInvoiceStatusLabel(inv)}
                         </span>
                         <span className="font-extrabold text-sm">
                           {formatToman(inv.total_toman)}

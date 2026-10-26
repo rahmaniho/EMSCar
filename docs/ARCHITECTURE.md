@@ -23,8 +23,8 @@
 | ۷ | Dispatch & Assignment | `src/server/modules/requests/dispatch.service.ts` | الگوریتم امتیازدهی چندمعیاره، ارسال پیشنهاد (`Offered`)، پذیرش اتمیک ضد تداخل هم‌زمان، ارجاع صادقانه به اپراتور |
 | ۸ | Mission Lifecycle | `src/server/modules/requests/state-machine.ts` | ماشین وضعیت ۱۲ حالته با ثبت کامل تاریخچه تغییر وضعیت (`request_state_history`) و گزارش پایان خدمت |
 | ۹ | Pricing & Quotation | `src/shared/pricing-formula.ts`, `modules/pricing/` | محاسبه شفاف پیش‌فاکتور و قیمت نهایی بر پایه **تومان صحیح**، سقف تخفیف، مالیات و حد آستانه تأیید مجدد مشتری |
-| ۱۰ | Payments & Refunds | `src/server/modules/payments/` | انتزاع درگاه پرداخت (`Sandbox` آزمایشی شفاف + `Zarinpal`)، استعلام سمت سرور Callback، بازپرداخت کامل/جزئی، بدهی اضطراری |
-| ۱۱ | Invoices & Settlements | `src/server/modules/payments/payments.service.ts` | صدور فاکتور رسمی، تفکیک کمیسیون پلتفرم و سهم خالص امدادگر، دفترکل مالی (`responder_ledger`) و تسویه شبا |
+| ۱۰ | Payments & Refunds | `src/server/modules/payments/` | انتزاع درگاه (`Sandbox` شبیه‌سازی + `Zarinpal`) و استعلام سمت سرور Callback؛ Refund واقعی تا اتصال و آزمون provider مسدود است؛ بدهی اضطراری خاموش پیش‌فرض و بدون دریافت وجه |
+| ۱۱ | Invoices & Settlements | `src/server/modules/payments/payments.service.ts` | صدور فاکتور و دفترکل کیف پول؛ Sandbox/legacy از جمع‌های مالی اصلی جداست؛ تسویهٔ Sandbox شبیه‌سازی و تسویهٔ زنده فقط ثبت دستی با مرجع/تأیید مدیر است، نه انتقال خودکار بانکی |
 | ۱۲ | Notifications | `src/server/modules/notifications/` | لایه انتزاعی پیامک (`SandboxOutbox` + `Kavenegar`) و اعلان درون‌برنامه‌ای با کلید ضدتکرار و تلاش مجدد کنترل‌شده |
 | ۱۳ | Support & Disputes | `src/server/modules/support/` | تیکت و شکایت متصل به مأموریت، یادداشت داخلی محرمانه اپراتور (`internal_operator_notes`)، ارجاع به مدیر و وضعیت `UnderSupportReview` |
 | ۱۴ | Ratings & Reviews | `src/server/modules/ratings/` | ثبت امتیاز ۱ تا ۵ و بازخورد پس از تکمیل مأموریت (یک‌بار به ازای هر مأموریت) و بروزرسانی میانگین امتیاز امدادگر |

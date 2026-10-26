@@ -13,6 +13,26 @@ import {
 } from '../../../shared/geo-utils.ts';
 import type { VehicleCategory } from '../../../shared/constants.ts';
 
+type QuoteParams = {
+  serviceId: number;
+  origin: GeoPoint;
+  destination?: GeoPoint | null;
+  vehicleCategory: VehicleCategory;
+  isUrgent?: boolean;
+  discountCode?: string;
+  estimatedDispatchKmOverride?: number;
+  partsCostToman?: number;
+  atDate?: Date;
+};
+
+type QuoteResult = {
+  breakdown: PriceBreakdown;
+  coverage: ReturnType<GeographyService['requireActiveOperationalCoverage']>;
+  towDistanceKm: number;
+  estimatedDispatchKm: number;
+  appliedDiscountCode: string | null;
+};
+
 export interface PricingRulesRecord {
   domesticMultiplier: number;
   foreignMultiplier: number;
@@ -132,25 +152,23 @@ export class PricingService {
     return row;
   }
 
-  calculateQuote(params: {
-    serviceId: number;
-    origin: GeoPoint;
-    destination?: GeoPoint | null;
-    vehicleCategory: VehicleCategory;
-    isUrgent?: boolean;
-    discountCode?: string;
-    estimatedDispatchKmOverride?: number;
-    partsCostToman?: number;
-    atDate?: Date;
-  }): {
-    breakdown: PriceBreakdown;
-    coverage: ReturnType<GeographyService['requireActiveOperationalCoverage']>;
-    towDistanceKm: number;
-    estimatedDispatchKm: number;
-    appliedDiscountCode: string | null;
-  } {
+  calculateQuote(params: QuoteParams): QuoteResult {
+    return this.calculateQuoteInternal(params, false);
+  }
+
+  /** Reprice an already-persisted mission without applying gates for new service offers. */
+  calculateExistingMissionQuote(params: QuoteParams): QuoteResult {
+    return this.calculateQuoteInternal(params, true);
+  }
+
+  private calculateQuoteInternal(
+    params: QuoteParams,
+    allowDisabledEvForExistingMission: boolean
+  ): QuoteResult {
     const coverage = this.geography.requireActiveOperationalCoverage(params.origin);
-    const service = this.catalog.getServiceById(params.serviceId, coverage.zoneId);
+    const service = allowDisabledEvForExistingMission
+      ? this.catalog.getServiceForExistingMission(params.serviceId, coverage.zoneId)
+      : this.catalog.getServiceById(params.serviceId, coverage.zoneId);
 
     if (!service.supportedVehicleCategories.includes(params.vehicleCategory)) {
       throw new AppError(
